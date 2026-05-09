@@ -34,8 +34,23 @@ read_verilog -sv fracn_dll/dll.v
 
 read_verilog -sv synth/blackbox_stubs.v
 
+read_verilog -sv \
+    AttoIO/rtl/attoio_macro.v \
+    AttoIO/rtl/attoio_apb_if.v \
+    AttoIO/rtl/attoio_memmux.v \
+    AttoIO/rtl/attoio_gpio.v \
+    AttoIO/rtl/attoio_spi.v \
+    AttoIO/rtl/attoio_timer.v \
+    AttoIO/rtl/attoio_wdt.v \
+    AttoIO/rtl/attoio_ctrl.v \
+    AttoIO/models/dffram_rtl.v \
+    frv32/rtl/attorv32.v
+
+verilog_defines -DNRV_SINGLE_PORT_REGF -DNRV_SHARED_ADDER -DNRV_SERIAL_SHIFT
+
 hierarchy -check -top project_macro
 
+setattr -mod -set keep_hierarchy 1 DFFRAM
 
 synth -top project_macro
 

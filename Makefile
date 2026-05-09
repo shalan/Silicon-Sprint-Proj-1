@@ -92,7 +92,7 @@ lint: $(FILELIST)
 show:
 	@cat $(BUILD)/sim.log
 
-synth: synth/synth.ys synth/dff_map.v synth/blackbox_stubs.v
+synth: synth/synth.ys synth/blackbox_stubs.v
 	yosys synth/synth.ys 2>&1 | tee $(SYNTH_DIR)/synth.log
 	@echo ""
 	@echo "=== Synthesis Summary ==="
