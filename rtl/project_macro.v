@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// project_macro — USB CDC + FLL + RC Oscillators test chip
+// project_macro — USB CDC + FLL + RC Oscillators + AttoIO test chip
 //
 // GPIO Pin Map (bottom edge, 15 pins → Caravel right pads):
 //   [0]  : uart_rx      (input)
@@ -15,17 +15,25 @@
 //   [10] : clk48m_mon   (output, 48 MHz FLL/2 clock, gated)
 //   [11-14]: spare
 //
+// Right-edge (9 pins): AttoIO GPIO[15:14] + spare
+//   [0-1] : attoio_gpio[15:14]
+//   [2-8] : spare
+//
+// Top-edge (14 pins): AttoIO GPIO[13:0]
+//   [0-13]: attoio_gpio[13:0]
+//
 // Clock architecture:
 //   xclk (6-12 MHz GPIO) → fracn_dll → 96 MHz → /2 → 48 MHz USB clock
 //   FLL bypass mode: xclk directly to USB (for debug)
 //   RC OSC 16 MHz: monitor output + optional FLL reference
 //   RC OSC 500 kHz: low-frequency monitor output
+//   AttoIO: sysclk = xclk, clk_iop = xclk ÷ configurable divider
 //
 // APB address map (via UART APB master, 8 KB slots):
 //   0x0000: Clock control (FLL, RC OSC enables, dividers, muxes, USB pad)
 //   0x2000: Status registers (freq counters, sync'd status)
 //   0x4000: USB CDC FIFO (read/write bytes)
-//   0x6000-0xE000: unused
+//   0x6000: AttoIO I/O processor (11-bit internal address space)
 
 `timescale 1ns / 1ps
 `default_nettype none
@@ -196,6 +204,49 @@ module project_macro #(
     assign S6_PREADY = 1'b1;   assign S7_PREADY = 1'b1;
     assign S4_PSLVERR = 1'b0;  assign S5_PSLVERR = 1'b0;
     assign S6_PSLVERR = 1'b0;  assign S7_PSLVERR = 1'b0;
+
+    wire [15:0] attoio_pad_in;
+    wire [15:0] attoio_pad_out;
+    wire [15:0] attoio_pad_oe;
+    wire [127:0] attoio_pad_ctl;
+    wire        attoio_irq;
+    wire        attoio_clk_iop;
+
+    clk_div #(.WIDTH(16)) u_attoio_clk_div (
+        .clk_in(xclk), .rst_n(sys_rst_n),
+        .en(1'b1), .div_ratio(16'd0), .clk_out(attoio_clk_iop)
+    );
+
+    attoio_macro #(
+        .NGPIO(16)
+    ) u_attoio (
+        .sysclk   (xclk),
+        .clk_iop  (attoio_clk_iop),
+        .rst_n    (sys_rst_n),
+        .PADDR    (S3_PADDR[10:0]),
+        .PSEL     (S3_PSEL),
+        .PENABLE  (S3_PENABLE),
+        .PWRITE   (S3_PWRITE),
+        .PWDATA   (S3_PWDATA),
+        .PSTRB    (S3_PWRITE ? 4'b1111 : 4'b0000),
+        .PRDATA   (S3_PRDATA),
+        .PREADY   (S3_PREADY),
+        .PSLVERR  (S3_PSLVERR),
+        .pad_in   (attoio_pad_in),
+        .pad_out  (attoio_pad_out),
+        .pad_oe   (attoio_pad_oe),
+        .pad_ctl  (attoio_pad_ctl),
+        .hp0_out  ({16{1'b0}}),
+        .hp0_oe   ({16{1'b0}}),
+        .hp0_in   (),
+        .hp1_out  ({16{1'b0}}),
+        .hp1_oe   ({16{1'b0}}),
+        .hp1_in   (),
+        .hp2_out  ({16{1'b0}}),
+        .hp2_oe   ({16{1'b0}}),
+        .hp2_in   (),
+        .irq_to_host(attoio_irq)
+    );
 
     uart_apb_sys #(
         .DEFAULT_DIVISOR (BAUD_DIV),
@@ -383,18 +434,31 @@ module project_macro #(
     assign gpio_bot_dm[13*3 +: 3] = 3'b110;
     assign gpio_bot_dm[14*3 +: 3] = 3'b110;
 
-    assign gpio_rt_out  = 9'b0;
-    assign gpio_rt_oeb  = {9{1'b1}};
-    assign gpio_top_out = 14'b0;
-    assign gpio_top_oeb = {14{1'b1}};
+    assign gpio_rt_out[8:2] = 7'b0;
+    assign gpio_rt_oeb[8:2] = {7{1'b1}};
+
+    assign gpio_rt_dm[2*3 +: 3] = 3'b110;
+    assign gpio_rt_dm[3*3 +: 3] = 3'b110;
+    assign gpio_rt_dm[4*3 +: 3] = 3'b110;
+    assign gpio_rt_dm[5*3 +: 3] = 3'b110;
+    assign gpio_rt_dm[6*3 +: 3] = 3'b110;
+    assign gpio_rt_dm[7*3 +: 3] = 3'b110;
+    assign gpio_rt_dm[8*3 +: 3] = 3'b110;
+
+    assign attoio_pad_in[15:14] = gpio_rt_in[1:0];
+    assign gpio_rt_out[1:0]     = attoio_pad_out[15:14];
+    assign gpio_rt_oeb[1:0]     = ~attoio_pad_oe[15:14];
+    assign gpio_rt_dm[0*3 +: 3] = attoio_pad_ctl[15*8 +: 3];
+    assign gpio_rt_dm[1*3 +: 3] = attoio_pad_ctl[14*8 +: 3];
+
+    assign attoio_pad_in[13:0] = gpio_top_in[13:0];
+    assign gpio_top_out        = attoio_pad_out[13:0];
+    assign gpio_top_oeb        = ~attoio_pad_oe[13:0];
 
     genvar i;
     generate
-        for (i = 0; i < 9; i = i + 1) begin : gen_rt_dm
-            assign gpio_rt_dm[i*3 +: 3] = 3'b110;
-        end
         for (i = 0; i < 14; i = i + 1) begin : gen_top_dm
-            assign gpio_top_dm[i*3 +: 3] = 3'b110;
+            assign gpio_top_dm[i*3 +: 3] = attoio_pad_ctl[i*8 +: 3];
         end
     endgenerate
 

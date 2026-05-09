@@ -2,6 +2,9 @@ PROJ     := $(shell pwd)
 RTL_DIR  := $(PROJ)/rtl
 UART_DIR := $(PROJ)/uart_apb_master/rtl
 USB_DIR  := $(PROJ)/usb_cdc/usb_cdc
+IOP_DIR  := $(PROJ)/AttoIO/rtl
+IOP_MOD  := $(PROJ)/AttoIO/models
+RV32_DIR := $(PROJ)/frv32/rtl
 BUILD    := $(PROJ)/build
 
 IVERILOG := iverilog
@@ -31,6 +34,18 @@ RTL_SRCS = \
 
 USB_SRCS := $(wildcard $(USB_DIR)/*.v)
 
+IOP_SRCS = \
+	$(IOP_DIR)/attoio_macro.v \
+	$(IOP_DIR)/attoio_apb_if.v \
+	$(IOP_DIR)/attoio_memmux.v \
+	$(IOP_DIR)/attoio_gpio.v \
+	$(IOP_DIR)/attoio_spi.v \
+	$(IOP_DIR)/attoio_timer.v \
+	$(IOP_DIR)/attoio_wdt.v \
+	$(IOP_DIR)/attoio_ctrl.v \
+	$(IOP_MOD)/dffram_rtl.v \
+	$(RV32_DIR)/attorv32.v
+
 TB_DIR  := $(PROJ)/tb
 
 TB_SRCS = \
@@ -51,11 +66,12 @@ $(BUILD):
 
 FILELIST := $(BUILD)/filelist.f
 
-$(FILELIST): $(RTL_SRCS) $(USB_SRCS) $(TB_SRCS) | $(BUILD)
+$(FILELIST): $(RTL_SRCS) $(USB_SRCS) $(IOP_SRCS) $(TB_SRCS) | $(BUILD)
 	@echo "Generating filelist..."
 	@rm -f $@
 	@for f in $(RTL_SRCS); do echo $$f >> $@; done
 	@for f in $(USB_SRCS); do echo $$f >> $@; done
+	@for f in $(IOP_SRCS); do echo $$f >> $@; done
 	@for f in $(TB_SRCS); do echo $$f >> $@; done
 
 SIM_VVP := $(BUILD)/sim.vvp
