@@ -1,0 +1,63 @@
+read_liberty -lib -ignore_miss_func /Users/mshalan/work/pdks/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+
+read_verilog \
+    rtl/project_macro.v \
+    rtl/fll_top.v \
+    rtl/apb_clk_ctrl.v \
+    rtl/apb_status.v \
+    rtl/apb_usb_fifo.v \
+    rtl/clk_mux_2to1.v \
+    rtl/clk_div.v
+
+read_verilog \
+    uart_apb_master/rtl/uart_apb_master.v \
+    uart_apb_master/rtl/uart_rx.v \
+    uart_apb_master/rtl/uart_tx.v \
+    uart_apb_master/rtl/baud_gen.v \
+    uart_apb_master/rtl/cmd_parser.v \
+    uart_apb_master/rtl/resp_builder.v \
+    uart_apb_master/rtl/apb_master.v \
+    uart_apb_master/rtl/apb_splitter.v \
+    uart_apb_master/rtl/uart_apb_sys.v
+
+read_verilog \
+    usb_cdc/usb_cdc/usb_cdc.v \
+    usb_cdc/usb_cdc/bulk_endp.v \
+    usb_cdc/usb_cdc/ctrl_endp.v \
+    usb_cdc/usb_cdc/in_fifo.v \
+    usb_cdc/usb_cdc/out_fifo.v \
+    usb_cdc/usb_cdc/phy_rx.v \
+    usb_cdc/usb_cdc/phy_tx.v \
+    usb_cdc/usb_cdc/sie.v
+
+read_verilog -sv fracn_dll/dll.v
+
+read_verilog -sv synth/blackbox_stubs.v
+
+hierarchy -check -top project_macro
+
+
+synth -top project_macro
+
+opt -purge
+opt_clean
+opt_expr
+opt_merge
+opt_muxtree
+opt_reduce
+opt_clean
+
+dfflegalize -cell $_DFF_P_ x -cell $_DFF_PN0_ 0 -cell $_DFF_PN1_ 1
+
+techmap -map synth/dff_map.v
+
+abc -liberty /Users/mshalan/work/pdks/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+
+clean
+opt_clean
+
+tee -o synth/project_macro.stat stat
+tee -o synth/project_macro.check check
+
+write_verilog -noattr -noexpr -nodec synth/project_macro.v
+write_json    synth/project_macro.json

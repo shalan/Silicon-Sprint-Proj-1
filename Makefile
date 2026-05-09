@@ -38,7 +38,11 @@ TB_SRCS = \
 
 SIM_FLAGS = -g2005 -DSIMULATION -Wall
 
-.PHONY: all sim clean lint
+SYNTH_DIR := $(PROJ)/synth
+PDK_DIR   := $(shell echo /Users/mshalan/work/pdks/volare/sky130/versions/*/sky130A)
+LIB_FILE  := $(PDK_DIR)/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+
+.PHONY: all sim clean lint synth
 
 all: sim
 
@@ -71,3 +75,11 @@ lint: $(FILELIST)
 
 show:
 	@cat $(BUILD)/sim.log
+
+synth: synth/synth.ys synth/dff_map.v synth/blackbox_stubs.v
+	yosys synth/synth.ys 2>&1 | tee $(SYNTH_DIR)/synth.log
+	@echo ""
+	@echo "=== Synthesis Summary ==="
+	@grep 'cells$$' $(SYNTH_DIR)/project_macro.stat | tail -1
+	@echo "Netlist: $(SYNTH_DIR)/project_macro.v"
+	@ls -la $(SYNTH_DIR)/project_macro.v

@@ -6,10 +6,12 @@ build/
 *.lxt
 
 # Synthesis outputs
-synth/*.v
+synth/project_macro.*
+synth/*.log
+synth/*.stat
 synth/*.json
 synth/*.rpt
-synth/*.stat
+synth/*.check
 
 # Editor / OS files
 *~
