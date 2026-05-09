@@ -1,0 +1,306 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" font-family="monospace" font-size="11">
+  <style>
+    .box { fill: #f0f4ff; stroke: #336; stroke-width: 1.5; rx: 6; }
+    .analog { fill: #fff0f0; stroke: #933; stroke-width: 1.5; rx: 6; }
+    .mux { fill: #f0fff0; stroke: #393; stroke-width: 1.5; rx: 4; }
+    .gpio { fill: #fff8e0; stroke: #a80; stroke-width: 1; rx: 3; }
+    .apb { fill: #e0e0ff; stroke: #339; stroke-width: 1; rx: 3; }
+    .label { font-size: 11px; fill: #333; }
+    .small { font-size: 9px; fill: #666; }
+    .bold { font-weight: bold; font-size: 12px; fill: #111; }
+    .wire { stroke: #336; stroke-width: 1.2; fill: none; }
+    .clkwire { stroke: #c00; stroke-width: 1.5; fill: none; }
+    .ctrlwire { stroke: #090; stroke-width: 1; fill: none; stroke-dasharray: 4,2; }
+    .arrowhead { fill: #336; }
+    .clkarrow { fill: #c00; }
+  </style>
+
+  <!-- Title -->
+  <text x="600" y="20" text-anchor="middle" class="bold" font-size="16">USB CDC + PLL + x2 Multiplier Test Chip — Block Diagram</text>
+
+  <!-- External inputs (left side) -->
+  <text x="15" y="75" class="label">clk</text>
+  <text x="15" y="75" class="small"> (green)</text>
+  <text x="15" y="115" class="label">xclk</text>
+  <text x="15" y="115" class="small"> gpio_bot[2]</text>
+  <text x="15" y="145" class="label">uart_rx</text>
+  <text x="15" y="145" class="small"> gpio_bot[0]</text>
+  <text x="15" y="168" class="label">reset_n</text>
+  <text x="15" y="182" class="label">por_n</text>
+
+  <!-- Reset block -->
+  <rect x="60" y="170" width="90" height="25" class="box"/>
+  <text x="105" y="187" text-anchor="middle" class="label">sys_rst_n</text>
+  <text x="105" y="196" text-anchor="middle" class="small">reset_n &amp; por_n</text>
+
+  <!-- RC OSC -->
+  <rect x="200" y="40" width="130" height="40" class="analog"/>
+  <text x="265" y="58" text-anchor="middle" class="bold">RC OSC</text>
+  <text x="265" y="72" text-anchor="middle" class="small">~5.5 MHz</text>
+
+  <!-- PLL -->
+  <rect x="200" y="100" width="130" height="50" class="analog"/>
+  <text x="265" y="118" text-anchor="middle" class="bold">PLL (stub)</text>
+  <text x="265" y="132" text-anchor="middle" class="small">4-ch, f=(A/B)×fref</text>
+  <text x="265" y="143" text-anchor="middle" class="small">ref = xclk &amp; pll_en</text>
+
+  <!-- x2 Multiplier -->
+  <rect x="200" y="175" width="160" height="55" class="box"/>
+  <text x="280" y="193" text-anchor="middle" class="bold">x2 Clock Mult</text>
+  <text x="280" y="207" text-anchor="middle" class="small">48× clkdlybuf4s50 (0.45ns)</text>
+  <text x="280" y="220" text-anchor="middle" class="small">8× clkdlybuf4s25 (0.22ns)</text>
+
+  <!-- USB Clock Mux -->
+  <polygon points="460,110 510,90 510,130" class="mux"/>
+  <text x="460" y="85" class="small">sel_usb[0]</text>
+  <text x="485" y="114" text-anchor="middle" class="small">USB Clk</text>
+  <text x="485" y="125" text-anchor="middle" class="small">Mux</text>
+
+  <!-- Monitor Clock Mux -->
+  <rect x="400" y="260" width="120" height="35" class="mux"/>
+  <text x="460" y="278" text-anchor="middle" class="label">5:1 Mon Mux</text>
+  <text x="460" y="290" text-anchor="middle" class="small">sel_mon[2:0]</text>
+
+  <!-- Monitor mux input labels -->
+  <text x="395" y="250" text-anchor="end" class="small">000=clk 001=xclk 010=PLL 011=x2 100=RCOSC</text>
+
+  <!-- USB CDC -->
+  <rect x="560" y="80" width="180" height="70" class="box"/>
+  <text x="650" y="100" text-anchor="middle" class="bold">USB CDC</text>
+  <text x="650" y="113" text-anchor="middle" class="small">clk_i ← usb_clk (48 MHz)</text>
+  <text x="650" y="125" text-anchor="middle" class="small">rstn_i ← sys_rst_n &amp; usb_rst_n</text>
+  <text x="650" y="137" text-anchor="middle" class="small">app_clk_i ← xclk</text>
+  <text x="650" y="147" text-anchor="middle" class="small">CH=1, BIT_SAMPLES=4</text>
+
+  <!-- Clock dividers -->
+  <rect x="420" y="340" width="70" height="30" class="box"/>
+  <text x="455" y="358" text-anchor="middle" class="small">PLL ÷N</text>
+
+  <rect x="510" y="340" width="70" height="30" class="box"/>
+  <text x="545" y="358" text-anchor="middle" class="small">OSC ÷M</text>
+
+  <rect x="600" y="340" width="70" height="30" class="box"/>
+  <text x="635" y="358" text-anchor="middle" class="small">MUX ÷K</text>
+
+  <!-- UART APB System -->
+  <rect x="200" y="420" width="260" height="50" class="box"/>
+  <text x="330" y="440" text-anchor="middle" class="bold">UART APB Master + 8-Slot Splitter</text>
+  <text x="330" y="455" text-anchor="middle" class="small">clk = xclk | BAUD_DIV = 13 (115200 @ 24MHz)</text>
+
+  <!-- APB Bus line -->
+  <line x1="200" y1="490" x2="950" y2="490" class="wire" stroke="#339" stroke-width="3"/>
+  <text x="575" y="485" text-anchor="middle" class="small" fill="#339">APB Bus (xclk domain)</text>
+
+  <!-- APB Slaves -->
+  <rect x="200" y="510" width="130" height="45" class="apb"/>
+  <text x="265" y="528" text-anchor="middle" class="bold">S0: PLL CSR</text>
+  <text x="265" y="540" text-anchor="middle" class="small">0x0000</text>
+  <text x="265" y="550" text-anchor="middle" class="small">APB → clk_csr strobe</text>
+
+  <rect x="350" y="510" width="130" height="45" class="apb"/>
+  <text x="415" y="528" text-anchor="middle" class="bold">S1: Clk Ctrl</text>
+  <text x="415" y="540" text-anchor="middle" class="small">0x2000</text>
+  <text x="415" y="550" text-anchor="middle" class="small">mux sel, enables, dm</text>
+
+  <rect x="500" y="510" width="130" height="45" class="apb"/>
+  <text x="565" y="528" text-anchor="middle" class="bold">S2: Status</text>
+  <text x="565" y="540" text-anchor="middle" class="small">0x4000</text>
+  <text x="565" y="550" text-anchor="middle" class="small">freq cnt, sync sigs</text>
+
+  <rect x="650" y="510" width="130" height="45" class="apb"/>
+  <text x="715" y="528" text-anchor="middle" class="bold">S3: USB FIFO</text>
+  <text x="715" y="540" text-anchor="middle" class="small">0x6000</text>
+  <text x="715" y="550" text-anchor="middle" class="small">read/write bytes</text>
+
+  <rect x="810" y="510" width="120" height="45" class="apb" fill="#eee" stroke="#999"/>
+  <text x="870" y="535" text-anchor="middle" class="small" fill="#999">S4-S7: unused</text>
+
+  <!-- GPIO Pads (right side) -->
+  <text x="990" y="50" class="bold">GPIO Bottom Pads</text>
+
+  <rect x="980" y="60" width="110" height="18" class="gpio"/>
+  <text x="1035" y="73" text-anchor="middle" class="small">[3] usb_dp</text>
+
+  <rect x="980" y="82" width="110" height="18" class="gpio"/>
+  <text x="1035" y="95" text-anchor="middle" class="small">[4] usb_dm</text>
+
+  <rect x="980" y="104" width="110" height="18" class="gpio"/>
+  <text x="1035" y="117" text-anchor="middle" class="small">[5] usb_pu</text>
+
+  <rect x="980" y="130" width="110" height="18" class="gpio"/>
+  <text x="1035" y="143" text-anchor="middle" class="small">[9] usb_cfg</text>
+
+  <rect x="980" y="190" width="110" height="18" class="gpio"/>
+  <text x="1035" y="203" text-anchor="middle" class="small">[10] x2_mon</text>
+
+  <rect x="980" y="340" width="110" height="18" class="gpio"/>
+  <text x="1035" y="353" text-anchor="middle" class="small">[6] pll_mon</text>
+
+  <rect x="980" y="362" width="110" height="18" class="gpio"/>
+  <text x="1035" y="375" text-anchor="middle" class="small">[7] osc_mon</text>
+
+  <rect x="980" y="384" width="110" height="18" class="gpio"/>
+  <text x="1035" y="397" text-anchor="middle" class="small">[8] clk_mon</text>
+
+  <rect x="980" y="428" width="110" height="18" class="gpio"/>
+  <text x="1035" y="441" text-anchor="middle" class="small">[0] uart_rx</text>
+
+  <rect x="980" y="450" width="110" height="18" class="gpio"/>
+  <text x="1035" y="463" text-anchor="middle" class="small">[1] uart_tx</text>
+
+  <!-- Clock wires (red) -->
+  <!-- xclk input -->
+  <line x1="70" y1="115" x2="120" y2="115" class="clkwire"/>
+  <text x="95" y="110" class="small" fill="#c00">xclk (24MHz)</text>
+
+  <!-- xclk to PLL -->
+  <line x1="120" y1="115" x2="120" y2="120" class="clkwire"/>
+  <line x1="120" y1="120" x2="200" y2="120" class="clkwire"/>
+
+  <!-- xclk to x2 mult -->
+  <line x1="120" y1="115" x2="120" y2="195" class="clkwire"/>
+  <line x1="120" y1="195" x2="200" y2="195" class="clkwire"/>
+
+  <!-- clk (green macro) to monitor mux -->
+  <line x1="70" y1="75" x2="120" y2="75" class="clkwire"/>
+  <line x1="120" y1="75" x2="120" y2="270" class="clkwire"/>
+  <line x1="120" y1="270" x2="400" y2="270" class="clkwire"/>
+  <text x="95" y="70" class="small" fill="#c00">clk</text>
+
+  <!-- xclk to UART APB -->
+  <line x1="120" y1="115" x2="120" y2="435" class="clkwire"/>
+  <line x1="120" y1="435" x2="200" y2="435" class="clkwire"/>
+
+  <!-- xclk to USB CDC app_clk -->
+  <line x1="120" y1="435" x2="120" y2="450" class="clkwire"/>
+  <line x1="120" y1="450" x2="550" y2="450" class="clkwire"/>
+  <line x1="550" y1="450" x2="550" y2="125" class="clkwire"/>
+  <line x1="550" y1="125" x2="560" y2="125" class="clkwire"/>
+
+  <!-- rcosc_clk -->
+  <line x1="330" y1="60" x2="380" y2="60" class="clkwire"/>
+  <line x1="380" y1="60" x2="380" y2="280" class="clkwire"/>
+  <line x1="380" y1="280" x2="400" y2="280" class="clkwire"/>
+  <text x="345" y="55" class="small" fill="#c00">rcosc</text>
+
+  <!-- PLL out -->
+  <line x1="330" y1="120" x2="460" y2="120" class="clkwire"/>
+  <text x="385" y="116" class="small" fill="#c00">pll_out[0]</text>
+
+  <!-- x2 out -->
+  <line x1="360" y1="200" x2="420" y2="200" class="clkwire"/>
+  <text x="375" y="196" class="small" fill="#c00">x2_clk</text>
+
+  <!-- x2 to USB mux -->
+  <line x1="420" y1="200" x2="420" y2="125" class="clkwire"/>
+  <line x1="420" y1="125" x2="460" y2="125" class="clkwire"/>
+
+  <!-- PLL to USB mux -->
+  <line x1="430" y1="120" x2="460" y2="120" class="clkwire"/>
+  <line x1="430" y1="95" x2="460" y2="95" class="clkwire"/>
+  <line x1="430" y1="95" x2="430" y2="120" class="clkwire"/>
+
+  <!-- USB mux to USB CDC -->
+  <line x1="510" y1="110" x2="560" y2="110" class="clkwire"/>
+  <text x="525" y="106" class="small" fill="#c00">usb_clk</text>
+
+  <!-- x2 to monitor mux -->
+  <line x1="420" y1="200" x2="420" y2="265" class="clkwire"/>
+  <line x1="420" y1="265" x2="400" y2="265" class="clkwire"/>
+
+  <!-- PLL to monitor mux -->
+  <line x1="430" y1="95" x2="430" y2="260" class="clkwire"/>
+  <line x1="430" y1="260" x2="400" y2="260" class="clkwire"/>
+
+  <!-- Monitor mux to dividers -->
+  <line x1="520" y1="278" x2="560" y2="278" class="clkwire"/>
+  <line x1="560" y1="278" x2="560" y2="355" class="clkwire"/>
+  <line x1="560" y1="355" x2="600" y2="355" class="clkwire"/>
+
+  <!-- PLL direct to divider -->
+  <line x1="370" y1="135" x2="370" y2="355" class="clkwire"/>
+  <line x1="370" y1="355" x2="420" y2="355" class="clkwire"/>
+
+  <!-- RCOSC to divider -->
+  <line x1="380" y1="280" x2="380" y2="355" class="clkwire"/>
+  <line x1="380" y1="355" x2="510" y2="355" class="clkwire"/>
+
+  <!-- Dividers to GPIO -->
+  <line x1="455" y1="370" x2="455" y2="390" class="wire"/>
+  <line x1="455" y1="390" x2="980" y2="390" class="wire" stroke="#a80"/>
+  <line x1="545" y1="370" x2="545" y2="385" class="wire"/>
+  <line x1="545" y1="385" x2="980" y2="385" class="wire" stroke="#a80"/>
+  <line x1="635" y1="370" x2="635" y2="380" class="wire"/>
+  <line x1="635" y1="380" x2="980" y2="380" class="wire" stroke="#a80"/>
+  <line x1="455" y1="390" x2="455" y2="347" class="wire" stroke="#a80"/>
+  <line x1="545" y1="385" x2="545" y2="347" class="wire" stroke="#a80"/>
+  <line x1="635" y1="380" x2="635" y2="347" class="wire" stroke="#a80"/>
+
+  <!-- x2 direct to GPIO -->
+  <line x1="420" y1="200" x2="980" y2="200" class="clkwire"/>
+  <text x="700" y="196" class="small" fill="#c00">x2_clk (direct, gated by x2_mon_en)</text>
+
+  <!-- USB CDC to GPIO pads -->
+  <line x1="740" y1="95" x2="980" y2="95" class="wire" stroke="#a80"/>
+  <text x="860" y="91" class="small" fill="#a80">dp_tx/dp_rx</text>
+  <line x1="740" y1="115" x2="980" y2="117" class="wire" stroke="#a80"/>
+  <text x="860" y="113" class="small" fill="#a80">dn_tx/dn_rx</text>
+  <line x1="740" y1="135" x2="980" y2="139" class="wire" stroke="#a80"/>
+  <text x="860" y="131" class="small" fill="#a80">dp_pu (1.5kΩ ext)</text>
+
+  <!-- USB configured to GPIO -->
+  <line x1="740" y1="145" x2="860" y2="145" class="wire" stroke="#a80"/>
+  <line x1="860" y1="145" x2="860" y2="139" class="wire" stroke="#a80"/>
+
+  <!-- UART to GPIO -->
+  <line x1="330" y1="470" x2="330" y2="455" class="wire" stroke="#a80"/>
+  <line x1="330" y1="455" x2="980" y2="455" class="wire" stroke="#a80"/>
+  <text x="650" y="451" class="small" fill="#a80">uart_tx</text>
+
+  <!-- Control wires (green dashed) -->
+  <!-- APB to PLL CSR -->
+  <line x1="265" y1="510" x2="265" y2="490" class="ctrlwire"/>
+  <text x="270" y="500" class="small" fill="#090">csr_addr/data/clk_csr</text>
+
+  <!-- APB Clk Ctrl outputs -->
+  <line x1="415" y1="510" x2="415" y2="490" class="ctrlwire"/>
+  <text x="420" y="500" class="small" fill="#090">all ctrl regs</text>
+
+  <!-- APB USB FIFO -->
+  <line x1="715" y1="510" x2="715" y2="490" class="ctrlwire"/>
+  <line x1="715" y1="490" x2="715" y2="150" class="ctrlwire"/>
+  <line x1="715" y1="150" x2="740" y2="150" class="ctrlwire"/>
+  <text x="720" y="300" class="small" fill="#090">FIFO in/out</text>
+
+  <!-- Control labels on clock blocks -->
+  <text x="205" y="53" class="small" fill="#090">osc_en</text>
+  <text x="205" y="108" class="small" fill="#090">pll_en</text>
+  <text x="205" y="183" class="small" fill="#090">coarse[7:0]</text>
+  <text x="205" y="194" class="small" fill="#090">fine[2:0]</text>
+
+  <!-- Legend -->
+  <rect x="20" y="810" width="1160" height="80" fill="#fafafa" stroke="#ccc" rx="4"/>
+  <text x="40" y="830" class="bold">Legend:</text>
+  <line x1="40" y1="845" x2="80" y2="845" class="clkwire"/>
+  <text x="85" y="849" class="small">Clock signal</text>
+  <line x1="200" y1="845" x2="240" y2="845" class="ctrlwire"/>
+  <text x="245" y="849" class="small">Control signal (APB)</text>
+  <line x1="410" y1="845" x2="450" y2="845" class="wire" stroke="#a80"/>
+  <text x="455" y="849" class="small">GPIO pad signal</text>
+
+  <rect x="40" y="858" width="20" height="12" class="analog"/>
+  <text x="65" y="868" class="small">Analog macro (stub)</text>
+  <rect x="200" y="858" width="20" height="12" class="box"/>
+  <text x="225" y="868" class="small">Digital block</text>
+  <rect x="340" y="858" width="20" height="12" class="mux"/>
+  <text x="365" y="868" class="small">Clock mux</text>
+  <rect x="460" y="858" width="20" height="12" class="apb"/>
+  <text x="485" y="868" class="small">APB slave</text>
+  <rect x="580" y="858" width="20" height="12" class="gpio"/>
+  <text x="605" y="868" class="small">GPIO pad</text>
+
+  <text x="750" y="830" class="bold">Re-enumerate:</text>
+  <text x="750" y="845" class="small">1. Write 0x2000_18 = 0x00 (usb_rst_n=0)</text>
+  <text x="750" y="858" class="small">2. Wait ~10 ms</text>
+  <text x="750" y="871" class="small">3. Write 0x2000_18 = 0x10 (usb_rst_n=1)</text>
+</svg>
