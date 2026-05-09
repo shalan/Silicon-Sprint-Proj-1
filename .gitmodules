@@ -1,0 +1,15 @@
+[submodule "fracn_dll"]
+	path = fracn_dll
+	url = https://github.com/RTimothyEdwards/fracn_dll.git
+[submodule "uart_apb_master"]
+	path = uart_apb_master
+	url = https://github.com/shalan/uart_apb_master.git
+[submodule "usb_cdc"]
+	path = usb_cdc
+	url = https://github.com/ulixxe/usb_cdc.git
+[submodule "sky130_ef_ip__rc_osc_16M"]
+	path = sky130_ef_ip__rc_osc_16M
+	url = https://github.com/RTimothyEdwards/sky130_ef_ip__rc_osc_16M.git
+[submodule "sky130_ef_ip__rc_osc_500k"]
+	path = sky130_ef_ip__rc_osc_500k
+	url = https://github.com/RTimothyEdwards/sky130_ef_ip__rc_osc_500k.git
