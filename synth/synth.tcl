@@ -111,11 +111,8 @@ opt_reduce
 opt_clean
 
 # ---------------------------------------------------------------
-# DFF legalization for Sky130
-dfflegalize -cell {$_DFF_P_} x -cell {$_DFF_PN0_} 0 -cell {$_DFF_PN1_} 1
-
-# Map generic DFFs to Sky130 cells
-techmap -map $OUT_DIR/dff_map.v
+# DFF mapping using liberty file
+dfflibmap -liberty $LIB
 
 # Technology mapping
 abc -liberty $LIB
