@@ -31,8 +31,10 @@ RTL_SRCS = \
 
 USB_SRCS := $(wildcard $(USB_DIR)/*.v)
 
+TB_DIR  := $(PROJ)/tb
+
 TB_SRCS = \
-	$(RTL_DIR)/tb_project_macro.v
+	$(TB_DIR)/tb_project_macro.v
 
 SIM_FLAGS = -g2005 -DSIMULATION -Wall
 
