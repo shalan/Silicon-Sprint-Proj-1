@@ -8,14 +8,14 @@ UART-to-APB debug bridge. Targets the
 ## Architecture
 
 ```
-                    ┌──────────────────────────────────────────────────────────────┐
- xclk (6-12 MHz) ──┤  fracn_dll FLL ──► 96 MHz ──► /2 ──► 48 MHz (USB)           │
+                    ┌─────────────────────────────────────────────────────────────┐
+ xclk (6-12 MHz)  ──┤  fracn_dll FLL ──► 96 MHz ──► /2 ──► 48 MHz (USB)           │
  GPIO pin           │                                                             │
-                    │  ┌──────────┐                                              │
-clk (green macro)───┤  │ UART APB │──► APB Splitter ──► S0: clk_ctrl (0x0000)    │
-                    │  │  Bridge  │──►              ──► S1: status   (0x2000)    │
-  uart_rx ◄─────────┤  │ (xclk)   │──►              ──► S2: usb_fifo (0x4000)    │
-  uart_tx ──────────┤  └──────────┘                  ──► S3: AttoIO   (0x6000)    │
+                    │  ┌──────────┐                                               │
+clk (green macro)───┤  │ UART APB │──► APB Splitter ──► S0: clk_ctrl (0x0000)     │
+                    │  │  Bridge  │──►              ──► S1: status   (0x2000)     │
+  uart_rx ◄─────────┤  │ (xclk)   │──►              ──► S2: usb_fifo (0x4000)     │
+  uart_tx ─────────►┤  └──────────┘                  ──► S3: AttoIO   (0x6000)    │
                     │                                        ┌──────────────────┐ │
                     │                                        │ RV32EC + 1KB RAM │ │
                     │                                        │ 16 GPIO, SPI,    │ │
@@ -23,7 +23,7 @@ clk (green macro)───┤  │ UART APB │──► APB Splitter ──► 
                     │                                        └──────────────────┘ │
                     │  RC OSC 16 MHz ──► monitor output                           │
                     │  RC OSC 500 kHz ─► monitor output                           │
-                    └──────────────────────────────────────────────────────────────┘
+                    └─────────────────────────────────────────────────────────────┘
 ```
 
 ### Clock Architecture
@@ -31,8 +31,8 @@ clk (green macro)───┤  │ UART APB │──► APB Splitter ──► 
 ```
                           Clock Sources
                     ┌──────────┬──────────────┐
-                    │ xclk     │ clk (green)   │
-                    │ 6-12 MHz │ macro pin     │
+                    │ xclk     │ clk (green)  │
+                    │ 6-12 MHz │ macro pin    │
                     └────┬─────┴──────────────┘
                          │          │
           ┌──────────────┤          │
@@ -52,8 +52,8 @@ clk (green macro)───┤  │ UART APB │──► APB Splitter ──► 
           ├──── /2 (toggle FF)      │
           │              │          │
           ▼              ▼          │
-      48 MHz          xclk         │
-      (clk_48m)                    │
+      48 MHz          xclk          │
+      (clk_48m)                     │
           │              │          │
           ▼              │          │
    ┌──────────────┐      │          │
@@ -62,8 +62,8 @@ clk (green macro)───┤  │ UART APB │──► APB Splitter ──► 
    └──────┬───────┘      │          │
           │              │          │
           ▼              │          │
-       usb_clk          │          │
-    (48M or xclk)       │          │
+       usb_clk           │          │
+    (48M or xclk)        │          │
           │              │          │
           ▼              ▼          ▼
    ┌──────────┐   ┌──────────────────────┐
@@ -89,7 +89,7 @@ clk (green macro)───┤  │ UART APB │──► APB Splitter ──► 
 
 
     ┌──────────────────────────────────────────────┐
-    │            Monitor / Measure                  │
+    │            Monitor / Measure                 │
     │                                              │
     │  Sources:          6:1 Mux (sel_mon[2:0])    │
     │  [0] clk (green)     │                       │
@@ -99,13 +99,13 @@ clk (green macro)───┤  │ UART APB │──► APB Splitter ──► 
     │  [4] rc16m_clk       │                       │
     │  [5] rc500k_clk      │                       │
     │                                              │
-    │  Dedicated monitor outputs (clk_div per):     │
+    │ Dedicated monitor outputs (clk_div per):     │
     │    fll_96m  ──► clk_div ──► gpio_bot[6]      │
     │    rc16m    ──► clk_div ──► gpio_bot[7]      │
     │    rc500k   ──► clk_div ──► gpio_bot[8]      │
     │    fll_48m  ────────────► gpio_bot[10]       │
     │                                              │
-    │  Frequency counters (apb_status, xclk domain) │
+    │ Frequency counters (apb_status, xclk domain) │
     │    FLL 96M edges  ──► 2-bit sync ──► count   │
     │    RC 16M edges   ──► 2-bit sync ──► count   │
     │    xclk edges     ───────────────► count     │
