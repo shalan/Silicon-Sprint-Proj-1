@@ -4,7 +4,7 @@
 // GPIO Pin Map (bottom edge, 15 pins → Caravel right pads):
 //   [0]  : uart_rx      (input)
 //   [1]  : uart_tx      (output)
-//   [2]  : xclk         (input, external clock 6-12 MHz)
+//   [2]  : xclk         (input, external clock 12 MHz)
 //   [3]  : usb_dp       (bidirectional)
 //   [4]  : usb_dm       (bidirectional)
 //   [5]  : usb_pu       (output, pullup enable — needs ext 1.5kΩ to D+)
@@ -23,11 +23,12 @@
 //   [0-13]: attoio_gpio[13:0]
 //
 // Clock architecture:
-//   xclk (6-12 MHz GPIO) → fracn_dll → 96 MHz → /2 → 48 MHz USB clock
-//   FLL bypass mode: xclk directly to USB (for debug)
+//   xclk (12 MHz GPIO) -> fracn_dll -> 96 MHz -> /2 -> 48 MHz USB clock (clk_i)
+//   app_clk_i = xclk (same as APB domain; USB IP handles clk_i <-> app_clk_i CDC)
+//   FLL bypass mode: xclk directly to USB clk_i (for debug)
 //   RC OSC 16 MHz: monitor output + optional FLL reference
 //   RC OSC 500 kHz: low-frequency monitor output
-//   AttoIO: sysclk = xclk, clk_iop = xclk ÷ configurable divider
+//   AttoIO: sysclk = xclk, clk_iop = xclk / 2
 //
 // APB address map (via UART APB master, 8 KB slots):
 //   0x0000: Clock control (FLL, RC OSC enables, dividers, muxes, USB pad)
@@ -40,8 +41,7 @@
 
 module project_macro #(
     parameter XCLK_FREQ_MHZ    = 12,
-    parameter BAUD_DIV         = 16'd6,
-    parameter USB_APP_CLK_FREQ = 48
+    parameter BAUD_DIV         = 16'd13
 )(
 `ifdef USE_POWER_PINS
     inout  vccd1,
@@ -369,13 +369,13 @@ module project_macro #(
         .CHANNELS              (1),
         .BIT_SAMPLES           (4),
         .USE_APP_CLK           (1),
-        .APP_CLK_FREQ          (USB_APP_CLK_FREQ),
+        .APP_CLK_FREQ          (12),
         .IN_BULK_MAXPACKETSIZE (8),
         .OUT_BULK_MAXPACKETSIZE(8)
     ) u_usb_cdc (
         .clk_i         (usb_clk),
         .rstn_i        (sys_rst_n & usb_rst_n),
-        .app_clk_i     (usb_clk),
+        .app_clk_i     (xclk),
         .out_data_o    (fifo_out_data),
         .out_valid_o   (fifo_out_valid),
         .out_ready_i   (fifo_out_ready),

@@ -9,7 +9,7 @@ UART-to-APB debug bridge. Targets the
 
 ```
                     ┌─────────────────────────────────────────────────────────────┐
- xclk (6-12 MHz)  ──┤  fracn_dll FLL ──► 96 MHz ──► /2 ──► 48 MHz (USB)           │
+ xclk (12 MHz)   ──┤  fracn_dll FLL ──► 96 MHz ──► /2 ──► 48 MHz (USB)           │
  GPIO pin           │                                                             │
                     │  ┌──────────┐                                               │
 clk (green macro)───┤  │ UART APB │──► APB Splitter ──► S0: clk_ctrl (0x0000)     │
@@ -32,7 +32,7 @@ clk (green macro)───┤  │ UART APB │──► APB Splitter ──► 
                           Clock Sources
                     ┌──────────┬──────────────┐
                     │ xclk     │ clk (green)  │
-                    │ 6-12 MHz │ macro pin    │
+                    │ 12 MHz   │ macro pin    │
                     └────┬─────┴──────────────┘
                          │          │
           ┌──────────────┤          │
@@ -116,9 +116,10 @@ clk (green macro)───┤  │ UART APB │──► APB Splitter ──► 
 
 | Domain        | Clock        | Frequency  | Modules                           | Crossing        |
 |---------------|-------------|------------|-----------------------------------|-----------------|
-| **USB**       | `usb_clk`   | 48 MHz     | `usb_cdc`                         | 2-bit sync to xclk (apb_status freq counters); async FIFO to xclk (apb_usb_fifo) |
-| **APB**       | `xclk`      | 6-12 MHz   | `uart_apb_sys`, `apb_clk_ctrl`, `apb_status`, `apb_usb_fifo` | - |
-| **AttoIO**    | `xclk`      | 6-12 MHz   | `attoio_macro` (`sysclk`)         | None (same as APB) |
+| **USB**       | `usb_clk`   | 48 MHz     | `usb_cdc` (clk_i)                 | clk_i ↔ app_clk_i: IP-internal 2-stage sync (safe CDC); app_clk_i=xclk ↔ apb_usb_fifo: IP handles CDC via double-buffer handshake |
+| **APB**       | `xclk`      | 12 MHz     | `uart_apb_sys`, `apb_clk_ctrl`, `apb_status`, `apb_usb_fifo` | - |
+| **AttoIO**    | `xclk`      | 12 MHz     | `attoio_macro` (`sysclk`)         | None (same as APB) |
+| **AttoIO core** | `clk_iop` | 6 MHz (xclk/2) | `AttoRV32`, SPI, timer, WDT   | Known phase (2:1 from xclk) |
 | **FLL**       | `fll_clk_96m` | 96 MHz  | `dll`, `dll_controller`           | Internal to FLL; output sampled via /2 and monitor dividers |
 | **RC 16M**    | `rc16m_clk`  | 16 MHz   | `sky130_ef_ip__rc_osc_16M`        | 2-bit sync to xclk (monitor + status) |
 | **RC 500k**   | `rc500k_clk` | 500 kHz  | `sky130_ef_ip__rc_osc_500k`       | 2-bit sync to xclk (monitor + status) |
@@ -128,16 +129,15 @@ clk (green macro)───┤  │ UART APB │──► APB Splitter ──► 
 
 The `usb_clk` is selected by a glitch-free `clk_mux_2to1` controlled by `fll_bypass` (CTRL[6]):
 
-| `fll_bypass` | USB Clock Source | Frequency     | Use Case            |
-|-------------|------------------|---------------|---------------------|
-| 0 (default) | FLL /2           | 48 MHz        | Normal operation    |
-| 1           | xclk (direct)    | 6-12 MHz      | Debug / bypass FLL  |
+| `fll_bypass` | USB Clock (`clk_i`) | App Clock (`app_clk_i`) | Use Case            |
+|-------------|---------------------|-------------------------|---------------------|
+| 0 (default) | FLL /2 = 48 MHz     | xclk (12 MHz)           | Normal operation    |
+| 1           | xclk (direct)       | xclk (12 MHz)           | Debug / bypass FLL  |
 
-FLL divider (`FLL_DIV` register, `0x04`): 8-bit `{5-bit integer, 3-bit fractional (eighths)}`.
-Target: `96 MHz = xclk * div`. Examples:
-- xclk=12 MHz, div=8.0 (`0x40`) -> 96 MHz
-- xclk=10 MHz, div=9.6 (`0x4C`) -> 96 MHz
-- xclk=6 MHz, div=16.0 (`0x80`) -> 96 MHz
+`app_clk_i` is always `xclk` (same as APB domain), so the USB FIFO interface is
+synchronous to APB. The `usb_cdc` IP handles the clk_i ↔ app_clk_i crossing
+internally with 2-stage synchronizers and double-buffer handshake
+(`APP_CLK_FREQ=12`, `USE_APP_CLK=1`).
 
 #### Monitor Outputs
 
@@ -160,7 +160,7 @@ Divider formula: `f_out = f_in / (2 * (div_ratio + 1))`.
 |-----|-------------|-----------|---------------------------------|
 | 0   | uart_rx     | input     | UART receive (APB bridge)       |
 | 1   | uart_tx     | output    | UART transmit (APB bridge)      |
-| 2   | xclk        | input     | External clock (6-12 MHz)       |
+| 2   | xclk        | input     | External clock (12 MHz)         |
 | 3   | usb_dp      | bidir     | USB D+                          |
 | 4   | usb_dm      | bidir     | USB D-                          |
 | 5   | usb_pu      | output    | USB pullup (ext 1.5k to D+)     |
@@ -193,6 +193,106 @@ Divider formula: `f_out = f_in / (2 * (div_ratio + 1))`.
 | `0x4000`  | usb_fifo   | USB CDC FIFO (read/write bytes)      |
 | `0x6000+` | AttoIO     | RV32EC I/O processor (16 GPIO, SPI, timer, WDT) |
 
+### Reset State
+
+#### Control Register Defaults (apb_clk_ctrl)
+
+| Control Bit | Default | Effect |
+|-------------|---------|--------|
+| `fll_en` | 0 | FLL off |
+| `fll_bypass` | 0 | USB mux selects FLL/2 (dead since FLL off) |
+| `usb_rst_n` | 1 | USB out of reset (but no clock) |
+| `rc16m_en` | 0 | RC 16M off |
+| `rc500k_en` | 0 | RC 500k off |
+| All `mon_en` | 0 | All monitor outputs disabled |
+| `fll_div` | 0 | FLL divider = 0 |
+| `usb_dp/dn/pu_dm` | 110 | USB pads in input mode |
+
+#### Subsystem State Out of Reset
+
+| Subsystem | Clock | Active? |
+|-----------|-------|---------|
+| UART APB bridge | xclk (12 MHz) | Yes |
+| apb_clk_ctrl | xclk | Yes |
+| apb_status | xclk | Yes (no clocks to count yet) |
+| apb_usb_fifo | xclk | Yes |
+| AttoIO (APB, SRAMs) | xclk | Yes |
+| AttoIO (RV32EC core) | clk_iop (6 MHz) | Yes — CPU executing from reset vector |
+| USB CDC (`clk_i`) | none (FLL off) | No clock, stuck |
+| USB CDC (`app_clk_i`) | xclk | Has clock but `clk_i` dead |
+| FLL | off | No output |
+| RC 16M / 500k | off | No output |
+| Monitor outputs | — | All gated off |
+
+### Register Maps
+
+#### clk_ctrl (0x0000)
+
+| Offset | Name | Bits | Default | Description |
+|--------|------|------|---------|-------------|
+| `0x00` | CTRL | [0] | 0 | `fll_en` — FLL enable |
+| | | [1] | 0 | `rc16m_en` — 16M RC OSC enable |
+| | | [2] | 0 | `rc500k_en` — 500k RC OSC enable |
+| | | [5:3] | 000 | `sel_mon` — Monitor mux select (6:1) |
+| | | [6] | 0 | `fll_bypass` — Bypass FLL, xclk to USB |
+| | | [7] | - | Reserved |
+| | | [8] | 1 | `usb_rst_n` — USB reset (active-low) |
+| `0x04` | FLL_DIV | [7:0] | 0x00 | FLL feedback divider {5-bit integer, 3-bit fractional (eighths)} |
+| `0x08` | FLL_DCO | [0] | 0 | `fll_dco` — DCO mode enable |
+| | | [27:2] | 0 | `fll_ext_trim` — DCO external trim [25:0] |
+| `0x0C` | FLL_MON_DIV | [15:0] | 0x0000 | FLL 96M output monitor divider |
+| `0x10` | RC16M_MON_DIV | [15:0] | 0x0000 | RC 16M monitor divider |
+| `0x14` | RC500K_MON_DIV | [15:0] | 0x0000 | RC 500k monitor divider |
+| `0x18` | CLK_MON_DIV | [15:0] | 0x0000 | Monitor mux output divider |
+| `0x1C` | MON_EN | [0] | 0 | `fll_mon_en` — FLL 96M monitor enable |
+| | | [1] | 0 | `rc16m_mon_en` — RC 16M monitor enable |
+| | | [2] | 0 | `rc500k_mon_en` — RC 500k monitor enable |
+| | | [3] | 0 | `clk_mon_en` — Mux monitor enable |
+| | | [4] | 0 | `clk48m_mon_en` — FLL 48M monitor enable |
+| `0x20` | USB_PAD | [2:0] | 110 | `usb_dp_dm` — D+ pad drive mode |
+| | | [5:3] | 110 | `usb_dn_dm` — D- pad drive mode |
+| | | [8:6] | 110 | `usb_pu_dm` — PU pad drive mode |
+
+#### status (0x2000, read-only)
+
+| Offset | Name | Bits | Description |
+|--------|------|------|-------------|
+| `0x00` | STATUS | [0] | `fll_active` — FLL 96M output toggling |
+| | | [1] | `fll_clk48m_active` — FLL/2 output toggling |
+| | | [2] | `rc16m_active` — RC 16M toggling |
+| | | [3] | `rc500k_active` — RC 500k toggling |
+| | | [4] | `fll_en_reg` — FLL enable (echo) |
+| | | [5] | `rc16m_en_reg` — RC 16M enable (echo) |
+| | | [6] | `rc500k_en_reg` — RC 500k enable (echo) |
+| | | [9:7] | `sel_mon` — Monitor mux select (echo) |
+| | | [10] | `fll_bypass` — FLL bypass (echo) |
+| `0x04` | FLL_CNT | [31:0] | FLL 96M edges in last 1M xclk cycles |
+| `0x08` | RC16M_CNT | [31:0] | RC 16M edges in last 1M xclk cycles |
+| `0x0C` | REF_CNT | [31:0] | xclk edges in last 1M xclk cycles (should be ~1M) |
+
+#### usb_fifo (0x4000)
+
+| Offset | Name | Access | Description |
+|--------|------|--------|-------------|
+| `0x00` | FIFO_DATA | R/W | Read: next USB OUT byte. Write: push byte to USB IN. |
+| `0x04` | FIFO_STATUS | RO | [0]: OUT_FIFO_NOT_EMPTY (data available), [1]: IN_FIFO_NOT_FULL (can write) |
+
+#### AttoIO (0x6000+, 11-bit internal address)
+
+AttoIO has an internal memory-mapped architecture. The host APB interface accesses
+a 2 KB address space (`PADDR[10:0]`). See [AttoIO documentation](https://github.com/shalan/AttoIO) for the full internal register map.
+
+Key host-accessible registers (within the `0x700` MMIO page):
+
+| Offset | Name | Access | Description |
+|--------|------|--------|-------------|
+| `0x700` | DOORBELL_H2C | W1S (host) | Host-to-core doorbell |
+| `0x704` | DOORBELL_C2H | R/W1C (host) | Core-to-host doorbell |
+| `0x708` | IOP_CTRL | R/W | IOP control register |
+| `0x70C` | VERSION | RO | Version {major, minor, patch, 0} |
+| `0x710` | PINMUX_LO | R/W | Pads 0-7 pinmux, 2 bits each |
+| `0x714` | PINMUX_HI | R/W | Pads 8-15 pinmux, 2 bits each |
+
 ### UART Protocol
 
 **Command**: `SYNC(0xDE, 0xAD) + CMD + ADDR[31:0] + DATA[31:0]` (write only)
@@ -221,30 +321,9 @@ This builds and runs the testbench. All 20 APB register tests should pass.
 
 ### UART Baud Rate
 
-Baud = `xclk_freq / (BAUD_DIV x 16)`.
+Baud = `xclk_freq / (BAUD_DIV x 16)`. With xclk = 12 MHz:
 
 UART tolerance with 16x oversampling: **+/-3%** max (theoretical +/-5%, safe limit +/-2-3%).
-
-#### 6 MHz xclk
-
-| DIV | Actual | Nearest Standard | Error |
-|-----|--------|-------------------|-------|
-| 4 | 93750 | 115200 | -18.62% |
-| 5 | 75000 | 57600 | +30.21% |
-| 6 | 62500 | 57600 | +8.51% |
-| 7 | 53571 | 57600 | -6.99% |
-| 8 | 46875 | 38400 | +22.07% |
-| 9 | 41667 | 38400 | +8.51% |
-| **10** | **37500** | **38400** | **-2.34%** |
-| 11 | 34091 | 38400 | -11.22% |
-| 12 | 31250 | 38400 | -18.62% |
-| 13 | 28846 | 38400 | -24.88% |
-| 14 | 26786 | 19200 | +39.51% |
-| 15 | 25000 | 19200 | +30.21% |
-
-**Recommended: DIV=10 -> 38400 baud** (only option within tolerance)
-
-#### 12 MHz xclk
 
 | DIV | Actual | Nearest Standard | Error |
 |-----|--------|-------------------|-------|
@@ -272,28 +351,29 @@ export PDK_ROOT=/path/to/sky130A
 make synth
 ```
 
-### Synthesis Results (28,288 cells)
+### Synthesis Results (28,374 cells)
 
 | Component             | Cells |
 |-----------------------|------:|
-| DFFRAM (256x32 SRAM)  | 14,094 |
-| AttoRV32 (RV32EC)     | 2,698  |
-| SIE (USB)             | 1,007  |
+| DFFRAM (256x32 SRAM)  | 14,096 |
+| AttoRV32 (RV32EC)     | 2,706  |
+| SIE (USB)             | 999    |
 | apb_status            | 919    |
-| AttoIO GPIO (16 pads) | 975    |
-| ctrl_endp (USB)       | 613    |
+| AttoIO GPIO (16 pads) | 977    |
+| ctrl_endp (USB)       | 610    |
+| in_fifo (USB, CDC)    | 491    |
+| out_fifo (USB, CDC)   | 447    |
 | dll_controller (FLL)  | 522    |
 | DFFRAM (32x32 SRAM)   | 1,623  |
 | AttoIO timer          | 1,053  |
-| in_fifo (USB)         | 446    |
-| out_fifo (USB)        | 392    |
 | AttoIO memmux         | 290    |
-| apb_clk_ctrl          | 346    |
+| apb_clk_ctrl          | 347    |
 | AttoIO macro (wiring) | 328    |
-| cmd_parser (UART)     | 325    |
+| cmd_parser (UART)     | 321    |
+| apb_splitter          | 178    |
 | UART APB master       | 65     |
-| Other (div, mux, etc) | ~1,180 |
-| **Total**             | **28,288** |
+| Other (div, mux, etc) | ~1,102 |
+| **Total**             | **28,374** |
 
 ## Submodules
 

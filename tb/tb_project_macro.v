@@ -43,8 +43,7 @@ module tb_project_macro;
 
     project_macro #(
         .XCLK_FREQ_MHZ    (12),
-        .BAUD_DIV         (16'd6),
-        .USB_APP_CLK_FREQ (48)
+        .BAUD_DIV         (16'd13)
     ) u_dut (
         .clk          (clk),
         .reset_n      (reset_n),
@@ -67,7 +66,7 @@ module tb_project_macro;
 
     localparam XCLK_HALF = 41;
     localparam CLK_HALF  = 25;
-    localparam BIT_NS    = 7872;
+    localparam BIT_NS    = 17333;
 
     initial begin
         clk = 0;
@@ -290,8 +289,8 @@ module tb_project_macro;
     end
 
     initial begin
-        #60_000_000;
-        $display("[%0t] TIMEOUT - simulation exceeded 60s", $time);
+        #120_000_000;
+        $display("[%0t] TIMEOUT - simulation exceeded 120s", $time);
         $finish;
     end
 
