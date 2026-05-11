@@ -1,0 +1,48 @@
+{
+    "DESIGN_NAME": "dll",
+
+    "VERILOG_FILES": [
+        "dir::../../fracn_dll/dll.v",
+        "dir::../../fracn_dll/dll_controller.v",
+        "dir::../../fracn_dll/ring_osc2x13.v"
+    ],
+
+    "CLOCK_PORT": "osc",
+    "CLOCK_PERIOD": 83.333,
+
+    "CLOCK_NET": "osc",
+
+    "SYNTH_STRATEGY": "DELAY 0",
+
+    "FP_SIZING":       "relative",
+    "FP_CORE_UTIL":    40,
+    "FP_ASPECT_RATIO": 1.0,
+    "FP_CORE_MARGIN":  5,
+
+    "PL_TARGET_DENSITY": 0.45,
+    "PL_RESIZER_HOLD_SLACK_MARGIN":  0.10,
+    "PL_RESIZER_SETUP_SLACK_MARGIN": 0.00,
+    "RUN_POST_GRT_RESIZER_TIMING":   true,
+    "GRT_RESIZER_HOLD_SLACK_MARGIN": 0.30,
+    "GRT_RESIZER_SETUP_SLACK_MARGIN":0.05,
+    "GRT_RESIZER_ALLOW_SETUP_VIOS":  false,
+
+    "FP_PIN_ORDER_CFG": "dir::pin_order.cfg",
+
+    "GRT_ANTENNA_REPAIR_ITERS": 4,
+    "DRT_ANTENNA_REPAIR_ITERS": 4,
+    "DIODE_ON_PORTS": "in",
+    "RUN_HEURISTIC_DIODE_INSERTION": false,
+    "GRT_ANTENNA_REPAIR_JUMPER_ONLY": true,
+    "DRT_ANTENNA_REPAIR_JUMPER_ONLY": true,
+
+    "DESIGN_IS_CORE": false,
+
+    "PNR_SDC_FILE":     "dir::dll.sdc",
+    "SIGNOFF_SDC_FILE": "dir::dll.sdc",
+
+    "SYNTH_ELABORATE_ONLY": false,
+
+    "PDK": "sky130A",
+    "STD_CELL_LIBRARY": "sky130_fd_sc_hd"
+}
