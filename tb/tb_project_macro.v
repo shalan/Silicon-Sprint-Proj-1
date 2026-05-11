@@ -81,6 +81,7 @@ module tb_project_macro;
     initial begin
         uart_rx       = 1;
         gpio_bot_drive = 15'b0;
+        gpio_bot_drive[11] = 1;
     end
 
     task send_byte;
@@ -180,9 +181,12 @@ module tb_project_macro;
 
         reset_n = 0;
         por_n   = 0;
+        gpio_bot_drive[11] = 0;
         #1000;
         reset_n = 1;
         por_n   = 1;
+        #500;
+        gpio_bot_drive[11] = 1;
         $display("[%0t] Reset released", $time);
         #5000;
 
@@ -272,6 +276,17 @@ module tb_project_macro;
         apb_write(32'h0000_4000, 32'h0000_006C);
         apb_write(32'h0000_4000, 32'h0000_006F);
         $display("[%0t] Wrote 'Hello' to USB FIFO", $time);
+
+        $display("=== Test 12: External reset via GPIO[11] ===");
+        apb_write(32'h0000_0000, 32'h0000_0101);
+        apb_read(32'h0000_0000, rdata);
+        check("pre_ext_rst_fll_en", rdata[0], 1'b1);
+        gpio_bot_drive[11] = 0;
+        #2000;
+        gpio_bot_drive[11] = 1;
+        #2000;
+        apb_read(32'h0000_0000, rdata);
+        check("post_ext_rst_ctrl", rdata, 32'h0000_0100);
 
         #100000;
 

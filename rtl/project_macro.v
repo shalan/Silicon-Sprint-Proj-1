@@ -13,7 +13,8 @@
 //   [8]  : rc500k_mon   (output, 500k RC OSC ÷ K)
 //   [9]  : usb_cfg      (output, USB configured status)
 //   [10] : clk48m_mon   (output, 48 MHz FLL/2 clock, gated)
-//   [11-14]: spare
+//   [11] : ext_rst_n    (input, active-low external reset)
+//   [12-14]: spare
 //
 // Right-edge (9 pins): AttoIO GPIO[15:14] + spare
 //   [0-1] : attoio_gpio[15:14]
@@ -69,6 +70,20 @@ module project_macro #(
 
     wire sys_rst_n = reset_n & por_n;
 
+    wire ext_rst_raw = gpio_bot_in[11];
+    reg  ext_rst_meta, ext_rst_sync;
+    always @(posedge xclk or negedge sys_rst_n) begin
+        if (!sys_rst_n) begin
+            ext_rst_meta <= 1'b1;
+            ext_rst_sync <= 1'b1;
+        end else begin
+            ext_rst_meta <= ext_rst_raw;
+            ext_rst_sync <= ext_rst_meta;
+        end
+    end
+
+    wire rst_n = sys_rst_n & ext_rst_sync;
+
     wire uart_rx_in = gpio_bot_in[0];
     wire xclk       = gpio_bot_in[2];
 
@@ -108,7 +123,7 @@ module project_macro #(
 
     wire fll_clk_96m, fll_clk_48m;
     fll_top u_fll_top (
-        .resetb   (sys_rst_n),
+        .resetb   (rst_n),
         .enable   (fll_en),
         .osc_ref  (xclk),
         .div      (fll_div),
@@ -123,7 +138,7 @@ module project_macro #(
         .clk0    (fll_clk_48m),
         .clk1    (xclk),
         .sel     (fll_bypass),
-        .rst_n   (sys_rst_n),
+        .rst_n   (rst_n),
         .clk_out (usb_clk)
     );
 
@@ -140,41 +155,41 @@ module project_macro #(
 
     clk_mux_2to1 u_mon_mux0 (
         .clk0(mon_sources[0]), .clk1(mon_sources[1]),
-        .sel(sel_mon[0]), .rst_n(sys_rst_n), .clk_out(mon_mid_a)
+        .sel(sel_mon[0]), .rst_n(rst_n), .clk_out(mon_mid_a)
     );
     clk_mux_2to1 u_mon_mux1 (
         .clk0(mon_sources[2]), .clk1(mon_sources[3]),
-        .sel(sel_mon[0]), .rst_n(sys_rst_n), .clk_out(mon_mid_b)
+        .sel(sel_mon[0]), .rst_n(rst_n), .clk_out(mon_mid_b)
     );
     clk_mux_2to1 u_mon_mux2 (
         .clk0(mon_sources[4]), .clk1(mon_sources[5]),
-        .sel(sel_mon[0]), .rst_n(sys_rst_n), .clk_out(mon_mid_c)
+        .sel(sel_mon[0]), .rst_n(rst_n), .clk_out(mon_mid_c)
     );
     clk_mux_2to1 u_mon_mux3 (
         .clk0(mon_mid_a), .clk1(mon_mid_b),
-        .sel(sel_mon[1]), .rst_n(sys_rst_n), .clk_out(mon_mid_d)
+        .sel(sel_mon[1]), .rst_n(rst_n), .clk_out(mon_mid_d)
     );
     clk_mux_2to1 u_mon_mux4 (
         .clk0(mon_mid_d), .clk1(mon_mid_c),
-        .sel(sel_mon[2]), .rst_n(sys_rst_n), .clk_out(mon_clk)
+        .sel(sel_mon[2]), .rst_n(rst_n), .clk_out(mon_clk)
     );
 
     wire fll_mon_clk, rc16m_mon_clk, rc500k_mon_clk, clk_mon_clk;
 
     clk_div #(.WIDTH(16)) u_fll_mon_div (
-        .clk_in(fll_clk_96m), .rst_n(sys_rst_n),
+        .clk_in(fll_clk_96m), .rst_n(rst_n),
         .en(fll_mon_en), .div_ratio(fll_mon_div), .clk_out(fll_mon_clk)
     );
     clk_div #(.WIDTH(16)) u_rc16m_mon_div (
-        .clk_in(rc16m_clk), .rst_n(sys_rst_n),
+        .clk_in(rc16m_clk), .rst_n(rst_n),
         .en(rc16m_mon_en), .div_ratio(rc16m_mon_div), .clk_out(rc16m_mon_clk)
     );
     clk_div #(.WIDTH(16)) u_rc500k_mon_div (
-        .clk_in(rc500k_clk), .rst_n(sys_rst_n),
+        .clk_in(rc500k_clk), .rst_n(rst_n),
         .en(rc500k_mon_en), .div_ratio(rc500k_mon_div), .clk_out(rc500k_mon_clk)
     );
     clk_div #(.WIDTH(16)) u_clk_mon_div (
-        .clk_in(mon_clk), .rst_n(sys_rst_n),
+        .clk_in(mon_clk), .rst_n(rst_n),
         .en(clk_mon_en), .div_ratio(clk_mon_div), .clk_out(clk_mon_clk)
     );
 
@@ -213,7 +228,7 @@ module project_macro #(
     wire        attoio_clk_iop;
 
     clk_div #(.WIDTH(16)) u_attoio_clk_div (
-        .clk_in(xclk), .rst_n(sys_rst_n),
+        .clk_in(xclk), .rst_n(rst_n),
         .en(1'b1), .div_ratio(16'd0), .clk_out(attoio_clk_iop)
     );
 
@@ -222,7 +237,7 @@ module project_macro #(
     ) u_attoio (
         .sysclk   (xclk),
         .clk_iop  (attoio_clk_iop),
-        .rst_n    (sys_rst_n),
+        .rst_n    (rst_n),
         .PADDR    (S3_PADDR[10:0]),
         .PSEL     (S3_PSEL),
         .PENABLE  (S3_PENABLE),
@@ -254,7 +269,7 @@ module project_macro #(
         .SLOT_BITS       (13)
     ) u_uart_apb_sys (
         .clk        (xclk),
-        .rst_n      (sys_rst_n),
+        .rst_n      (rst_n),
         .uart_rx    (uart_rx_in),
         .uart_tx    (uart_tx_out),
         .locked     (uart_locked),
@@ -294,7 +309,7 @@ module project_macro #(
 
     apb_clk_ctrl u_apb_clk_ctrl (
         .clk           (xclk),
-        .rst_n         (sys_rst_n),
+        .rst_n         (rst_n),
         .PADDR         (S0_PADDR),  .PSEL     (S0_PSEL),
         .PENABLE       (S0_PENABLE), .PWRITE  (S0_PWRITE),
         .PWDATA        (S0_PWDATA),  .PRDATA  (S0_PRDATA),
@@ -324,7 +339,7 @@ module project_macro #(
 
     apb_status u_apb_status (
         .clk           (xclk),
-        .rst_n         (sys_rst_n),
+        .rst_n         (rst_n),
         .PADDR         (S1_PADDR),  .PSEL     (S1_PSEL),
         .PENABLE       (S1_PENABLE), .PWRITE  (S1_PWRITE),
         .PWDATA        (S1_PWDATA),  .PRDATA  (S1_PRDATA),
@@ -349,7 +364,7 @@ module project_macro #(
 
     apb_usb_fifo u_apb_usb_fifo (
         .clk           (xclk),
-        .rst_n         (sys_rst_n),
+        .rst_n         (rst_n),
         .PADDR         (S2_PADDR),  .PSEL     (S2_PSEL),
         .PENABLE       (S2_PENABLE), .PWRITE  (S2_PWRITE),
         .PWDATA        (S2_PWDATA),  .PRDATA  (S2_PRDATA),
@@ -374,7 +389,7 @@ module project_macro #(
         .OUT_BULK_MAXPACKETSIZE(8)
     ) u_usb_cdc (
         .clk_i         (usb_clk),
-        .rstn_i        (sys_rst_n & usb_rst_n),
+        .rstn_i        (rst_n & usb_rst_n),
         .app_clk_i     (xclk),
         .out_data_o    (fifo_out_data),
         .out_valid_o   (fifo_out_valid),

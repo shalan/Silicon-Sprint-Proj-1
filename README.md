@@ -169,7 +169,8 @@ Divider formula: `f_out = f_in / (2 * (div_ratio + 1))`.
 | 8   | rc500k_mon  | output    | 500k RC OSC / K                 |
 | 9   | usb_cfg     | output    | USB configured status           |
 | 10  | clk48m_mon  | output    | 48 MHz FLL/2 clock (gated)     |
-| 11-14 | unused    | -         | Unused                          |
+| 11  | ext_rst_n   | input     | Active-low external reset      |
+| 12-14 | unused    | -         | Unused                          |
 
 #### Top Edge (14 pins, managed by AttoIO)
 
