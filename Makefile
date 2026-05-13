@@ -12,6 +12,7 @@ USB_DIR  := $(PROJ)/usb_cdc/usb_cdc
 IOP_DIR  := $(PROJ)/AttoIO/rtl
 IOP_MOD  := $(PROJ)/AttoIO/models
 RV32_DIR := $(PROJ)/frv32/rtl
+POR_DIR  := $(PROJ)/por_macro/rtl
 BUILD    := $(PROJ)/build
 TB_DIR   := $(PROJ)/tb
 TB_INC   := $(TB_DIR)/include
@@ -46,6 +47,9 @@ RTL_SRCS = \
 	$(RTL_DIR)/sky130_ef_ip__rc_osc_16M.v \
 	$(RTL_DIR)/sky130_ef_ip__rc_osc_500k.v \
 	$(RTL_DIR)/sky130_stubs.v \
+	$(POR_DIR)/ring_osc.v \
+	$(POR_DIR)/adpor.v \
+	$(POR_DIR)/por_macro.v \
 	$(UART_DIR)/uart_apb_master.v \
 	$(UART_DIR)/uart_rx.v \
 	$(UART_DIR)/uart_tx.v \

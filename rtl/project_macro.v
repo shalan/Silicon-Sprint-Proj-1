@@ -14,7 +14,8 @@
 //   [9]  : usb_cfg      (output, USB configured status)
 //   [10] : clk48m_mon   (output, 48 MHz FLL/2 clock, gated)
 //   [11] : ext_rst_n    (input, active-low external reset)
-//   [12-14]: spare
+//   [12] : adpor_mon    (output, all-digital PoR pulse — monitoring only)
+//   [13-14]: spare
 //
 // Right-edge (9 pins): AttoIO GPIO[15:14] + spare
 //   [0-1] : attoio_gpio[15:14]
@@ -83,6 +84,13 @@ module project_macro #(
     end
 
     wire rst_n = sys_rst_n & ext_rst_sync;
+
+    // All-digital PoR (characterization only — routed to gpio_bot[12]).
+    // Self-contained, no inputs; output is the PoR pulse.
+    wire adpor_por_n;
+    por_macro u_adpor_macro (
+        .por_n_out (adpor_por_n)
+    );
 
     wire uart_rx_in = gpio_bot_in[0];
     wire xclk       = gpio_bot_in[2];
@@ -418,7 +426,10 @@ module project_macro #(
     assign gpio_bot_out[8]  = rc500k_mon_clk;
     assign gpio_bot_out[9]  = usb_configured;
     assign gpio_bot_out[10] = fll_clk_48m;
-    assign gpio_bot_out[14:11] = 4'b0;
+    assign gpio_bot_out[11] = 1'b0;
+    assign gpio_bot_out[12] = adpor_por_n;
+    assign gpio_bot_out[13] = 1'b0;
+    assign gpio_bot_out[14] = 1'b0;
 
     assign gpio_bot_oeb[0]  = 1'b1;
     assign gpio_bot_oeb[1]  = 1'b0;
@@ -431,7 +442,10 @@ module project_macro #(
     assign gpio_bot_oeb[8]  = ~rc500k_mon_en;
     assign gpio_bot_oeb[9]  = 1'b0;
     assign gpio_bot_oeb[10] = ~clk48m_mon_en;
-    assign gpio_bot_oeb[14:11] = {4{1'b1}};
+    assign gpio_bot_oeb[11] = 1'b1;        // ext_rst_n input
+    assign gpio_bot_oeb[12] = 1'b0;        // adpor_por_n output
+    assign gpio_bot_oeb[13] = 1'b1;        // spare
+    assign gpio_bot_oeb[14] = 1'b1;        // spare
 
     assign gpio_bot_dm[0*3 +: 3] = 3'b001;
     assign gpio_bot_dm[1*3 +: 3] = 3'b110;
