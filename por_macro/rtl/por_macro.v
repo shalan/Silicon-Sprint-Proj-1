@@ -55,6 +55,10 @@ module por_macro #(
     ring_osc #(
         .HALF_PERIOD_NS (RO_HALF_PERIOD_NS)
     ) u_ro (
+`ifdef USE_POWER_PINS
+        .VPWR    (VPWR),
+        .VGND    (VGND),
+`endif
         .enable  (enable),
         .clk_out (ro_clk)
     );

@@ -20,9 +20,17 @@ IVERILOG := iverilog
 VVP      := vvp
 SIM_FLAGS = -g2005 -DSIMULATION -Wall
 
-.PHONY: all sim clean lint
+.PHONY: all sim clean lint synth
 
 all: sim
+
+synth: synth/synth.ys $(RTL_SRCS)
+	yosys synth/synth.ys 2>&1 | tee synth/synth.log
+	@echo ""
+	@echo "=== por_macro synthesis summary ==="
+	@grep -E '^\s+[0-9]+ +sky130' synth/por_macro.stat | tail -30
+	@echo ""
+	@ls -la synth/por_macro.v synth/por_macro.json 2>/dev/null
 
 $(BUILD):
 	mkdir -p $(BUILD)

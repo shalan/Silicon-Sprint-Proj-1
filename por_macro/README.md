@@ -75,14 +75,17 @@ The macro re-arms automatically on the next power cycle.
 
 ## Files
 
-| File                  | Purpose |
-|-----------------------|---------|
-| `rtl/ring_osc.v`      | Enableable ring oscillator (behavioral sim model + ASIC notes) |
-| `rtl/adpor.v`         | LENGTH-parameterized ADPOR shift-register PoR core |
-| `rtl/por_macro.v`     | Top: RO + divider + ADPOR + enable feedback |
-| `tb/tb_por_macro.v`   | Unit testbench (pulse-width window + RO-halt check) |
-| `Makefile`            | Local `make sim` / `make lint` |
-| `flow/librelane/`     | Hardening config (placeholder) |
+| File                          | Purpose |
+|-------------------------------|---------|
+| `rtl/ring_osc.v`              | Ring oscillator. Two views under `\`ifdef SIMULATION`: behavioral toggle for iverilog; hand-instantiated Sky130 HD gate-level netlist (1 nand2 + 4 inv + 15 clkdlybuf4s50) with `keep`/`dont_touch` for synthesis. |
+| `rtl/adpor.v`                 | LENGTH-parameterized ADPOR shift-register PoR core. |
+| `rtl/por_macro.v`             | Top: RO + divider + ADPOR + enable feedback. |
+| `tb/tb_por_macro.v`           | Unit testbench (pulse-width window + RO-halt check). |
+| `synth/synth.ys`              | Yosys script for standalone macro synthesis (RTL → gate netlist). |
+| `sdc/por_macro.sdc`           | Constraints. Declares ring-osc + generated PoR clocks and breaks the comb loop for STA. |
+| `flow/librelane/config.json`  | LibreLane hardening config (CTS disabled, fixed die area, dont-touch on RO cells). |
+| `flow/librelane/pin_order.cfg`| Pin placement hint. |
+| `Makefile`                    | `make sim` / `make lint` / `make synth`. |
 
 ## Ports
 
@@ -108,15 +111,29 @@ make lint   # iverilog -t null compile check
 The DUT initialises every flop to `$random` under `\`SIMULATION` so the
 behavior matches silicon coming out of power-on.
 
-## ASIC hardening — important note
+## ASIC hardening
 
-The RTL view of `ring_osc.v` is a **simulation-only behavioral model**. A
-combinational inverter loop will not survive logic synthesis. The
-hardening flow must replace this module's body with a hand-instantiated
-gate-level netlist using `sky130_fd_sc_hd` primitives, with
-`(* keep = "true" *)` and `(* dont_touch = "true" *)` attributes on every
-instance and on the loop net. See `flow/librelane/` for the hardening
-configuration (placeholder; to be filled in when the macro is taped out).
+The macro is ready to harden.
+
+- `ring_osc.v` exposes two views: a behavioral toggle (used by iverilog
+  when `\`SIMULATION` is defined) and a Sky130 HD gate-level netlist
+  (used by Yosys / OpenROAD when `\`SIMULATION` is *not* defined). Every
+  cell in the gate-level view, plus the loop wire, carries
+  `(* keep = "true" *)` and `(* dont_touch = "true" *)` so synthesis
+  and physical implementation preserve the structural intent.
+- `sdc/por_macro.sdc` declares the ring-osc output as a 33 ns clock
+  (slow-corner period, generous for STA margin), defines the PoR clock
+  as a `create_generated_clock -divide_by 64`, and uses
+  `set_disable_timing` on the NAND2.A→Y arc to break the combinational
+  loop. `set_dont_touch` is applied to all RO cells for the P&R flow.
+- `flow/librelane/config.json` disables CTS (the only clock is the
+  internally-generated RO; running CTS on it would rebalance the delay
+  buffer fanout and break the oscillator), sets a fixed `DIE_AREA` of
+  50 × 50 µm, and points at the SDC.
+
+Run `make synth` to produce the standalone macro netlist
+(`synth/por_macro.v`, ~262 cells). Then LibreLane uses the same RTL +
+SDC + config to harden the macro into LEF/LIB/GDS for integration.
 
 ## Integration
 

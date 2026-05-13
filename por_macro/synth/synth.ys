@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Yosys synthesis script for por_macro (standalone, RTL -> gate netlist).
+#
+# Run with:  yosys synth/synth.ys   (from por_macro/)
+#
+# Expected output:
+#   - synth/por_macro.v       : flat gate-level netlist
+#   - synth/por_macro.stat    : cell-count summary
+#   - synth/por_macro.json    : JSON netlist (for LibreLane / OpenROAD)
+#
+# Expected cell count: ~260 cells (102 FFs + ring-osc 20 + comparator trees).
+
+read_liberty -lib -ignore_miss_func \
+    /Users/mshalan/work/pdks/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+
+read_verilog \
+    rtl/ring_osc.v \
+    rtl/adpor.v \
+    rtl/por_macro.v
+
+hierarchy -check -top por_macro
+
+# Run generic synth (no -flatten: keeps the ring_osc cells visible and
+# avoids an optimization pass that incorrectly considers the registered
+# logic dead when the only clock comes through blackbox cells).
+synth -top por_macro
+
+dfflibmap -liberty \
+    /Users/mshalan/work/pdks/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+
+abc -liberty \
+    /Users/mshalan/work/pdks/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib
+
+# Flatten only AFTER tech mapping so the keep/dont_touch attributes have
+# already done their job and ABC has mapped everything else.
+flatten
+opt_clean -purge
+
+tee -o synth/por_macro.stat stat
+tee -o synth/por_macro.check check
+
+write_verilog -noattr -noexpr -nodec synth/por_macro.v
+write_json    synth/por_macro.json

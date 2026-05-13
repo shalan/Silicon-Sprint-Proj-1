@@ -1,0 +1,7 @@
+build/
+synth/por_macro.v
+synth/por_macro.json
+synth/por_macro.stat
+synth/por_macro.check
+synth/synth.log
+runs/
