@@ -17,9 +17,10 @@
 //   [12] : adpor_mon    (output, all-digital PoR pulse — monitoring only)
 //   [13-14]: spare
 //
-// Right-edge (9 pins): AttoIO GPIO[15:14] + spare
+// Right-edge (9 pins): AttoIO GPIO[15:14] + nc_sercom pads + spare
 //   [0-1] : attoio_gpio[15:14]
-//   [2-8] : spare
+//   [2-7] : sercom_pad[0:5]  (USART/SPI/I2C, runtime-configurable direction)
+//   [8]   : spare
 //
 // Top-edge (14 pins): AttoIO GPIO[13:0]
 //   [0-13]: attoio_gpio[13:0]
@@ -37,6 +38,7 @@
 //   0x2000: Status registers (freq counters, sync'd status)
 //   0x4000: USB CDC FIFO (read/write bytes)
 //   0x6000: AttoIO I/O processor (11-bit internal address space)
+//   0x8000: nc_sercom (USART/SPI/I2C, 12-bit internal address space)
 
 `timescale 1ns / 1ps
 `default_nettype none
@@ -221,12 +223,13 @@ module project_macro #(
     wire        S0_PSLVERR, S1_PSLVERR, S2_PSLVERR, S3_PSLVERR;
     wire        S4_PSLVERR, S5_PSLVERR, S6_PSLVERR, S7_PSLVERR;
 
-    assign S4_PRDATA = 32'd0;  assign S5_PRDATA = 32'd0;
-    assign S6_PRDATA = 32'd0;  assign S7_PRDATA = 32'd0;
-    assign S4_PREADY = 1'b1;   assign S5_PREADY = 1'b1;
-    assign S6_PREADY = 1'b1;   assign S7_PREADY = 1'b1;
-    assign S4_PSLVERR = 1'b0;  assign S5_PSLVERR = 1'b0;
-    assign S6_PSLVERR = 1'b0;  assign S7_PSLVERR = 1'b0;
+    // Slot 4 (0x8000) is driven by nc_sercom; tie off the remaining slots.
+    assign S5_PRDATA = 32'd0;  assign S6_PRDATA = 32'd0;
+    assign S7_PRDATA = 32'd0;
+    assign S5_PREADY = 1'b1;   assign S6_PREADY = 1'b1;
+    assign S7_PREADY = 1'b1;
+    assign S5_PSLVERR = 1'b0;  assign S6_PSLVERR = 1'b0;
+    assign S7_PSLVERR = 1'b0;
 
     wire [15:0] attoio_pad_in;
     wire [15:0] attoio_pad_out;
@@ -415,6 +418,42 @@ module project_macro #(
         .dn_rx_i       (gpio_bot_in[4])
     );
 
+    // ----------------------------------------------------------------------
+    // nc_sercom — multi-protocol serial peripheral (USART/SPI/I2C).
+    // APB slot 4 (0x8000). 6 pads on the right edge gpio_rt[7:2].
+    // irq_o and DMA requests are not consumed in this design.
+    // Vendored from github.com/nativechips/nc_lib (Apache-2.0); see
+    // nc_sercom/UPSTREAM for provenance.
+    // ----------------------------------------------------------------------
+    wire [5:0] sercom_pad_out;
+    wire [5:0] sercom_pad_oe;
+    wire [5:0] sercom_pad_in;
+
+    nc_sercom #(
+        .FIFO_DEPTH (16)
+    ) u_nc_sercom (
+        .PCLK         (xclk),
+        .PRESETn      (rst_n),
+        .PADDR        (S4_PADDR[11:0]),
+        .PSEL         (S4_PSEL),
+        .PENABLE      (S4_PENABLE),
+        .PWRITE       (S4_PWRITE),
+        .PWDATA       (S4_PWDATA),
+        .PRDATA       (S4_PRDATA),
+        .PREADY       (S4_PREADY),
+        .PSLVERR      (S4_PSLVERR),
+
+        .irq_o        (/* unconnected */),
+        .dma_tx_req_o (/* unconnected */),
+        .dma_rx_req_o (/* unconnected */),
+
+        .pad_out_o    (sercom_pad_out),
+        .pad_oe_o     (sercom_pad_oe),
+        .pad_in_i     (sercom_pad_in)
+    );
+
+    assign sercom_pad_in = gpio_rt_in[7:2];
+
     assign gpio_bot_out[0]  = 1'b0;
     assign gpio_bot_out[1]  = uart_tx_out;
     assign gpio_bot_out[2]  = 1'b0;
@@ -463,8 +502,13 @@ module project_macro #(
     assign gpio_bot_dm[13*3 +: 3] = 3'b110;
     assign gpio_bot_dm[14*3 +: 3] = 3'b110;
 
-    assign gpio_rt_out[8:2] = 7'b0;
-    assign gpio_rt_oeb[8:2] = {7{1'b1}};
+    // Right edge: gpio_rt[7:2] are nc_sercom pads (bidirectional via pad_oe).
+    // sercom uses active-high oe; project pad oeb is active-low -> invert.
+    assign gpio_rt_out[7:2] = sercom_pad_out;
+    assign gpio_rt_oeb[7:2] = ~sercom_pad_oe;
+    // gpio_rt[8] is the only remaining spare pin.
+    assign gpio_rt_out[8]   = 1'b0;
+    assign gpio_rt_oeb[8]   = 1'b1;
 
     assign gpio_rt_dm[2*3 +: 3] = 3'b110;
     assign gpio_rt_dm[3*3 +: 3] = 3'b110;

@@ -13,6 +13,7 @@ IOP_DIR  := $(PROJ)/AttoIO/rtl
 IOP_MOD  := $(PROJ)/AttoIO/models
 RV32_DIR := $(PROJ)/frv32/rtl
 POR_DIR  := $(PROJ)/por_macro/rtl
+SERCOM_DIR := $(PROJ)/nc_sercom/rtl
 BUILD    := $(PROJ)/build
 TB_DIR   := $(PROJ)/tb
 TB_INC   := $(TB_DIR)/include
@@ -50,6 +51,14 @@ RTL_SRCS = \
 	$(POR_DIR)/ring_osc.v \
 	$(POR_DIR)/adpor.v \
 	$(POR_DIR)/por_macro.v \
+	$(SERCOM_DIR)/nc_fifo.v \
+	$(SERCOM_DIR)/nc_sync.v \
+	$(SERCOM_DIR)/nc_ticker.v \
+	$(SERCOM_DIR)/nc_sercom_usart_tx.v \
+	$(SERCOM_DIR)/nc_sercom_usart_rx.v \
+	$(SERCOM_DIR)/nc_sercom_spi.v \
+	$(SERCOM_DIR)/nc_sercom_i2c.v \
+	$(SERCOM_DIR)/nc_sercom.v \
 	$(UART_DIR)/uart_apb_master.v \
 	$(UART_DIR)/uart_rx.v \
 	$(UART_DIR)/uart_tx.v \

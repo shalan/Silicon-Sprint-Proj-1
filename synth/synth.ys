@@ -34,6 +34,16 @@ read_verilog -sv fracn_dll/dll.v
 
 read_verilog -sv synth/blackbox_stubs.v
 
+read_verilog \
+    nc_sercom/rtl/nc_fifo.v \
+    nc_sercom/rtl/nc_sync.v \
+    nc_sercom/rtl/nc_ticker.v \
+    nc_sercom/rtl/nc_sercom_usart_tx.v \
+    nc_sercom/rtl/nc_sercom_usart_rx.v \
+    nc_sercom/rtl/nc_sercom_spi.v \
+    nc_sercom/rtl/nc_sercom_i2c.v \
+    nc_sercom/rtl/nc_sercom.v
+
 read_verilog -sv \
     AttoIO/rtl/attoio_macro.v \
     AttoIO/rtl/attoio_apb_if.v \

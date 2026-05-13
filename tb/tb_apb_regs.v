@@ -122,6 +122,15 @@ module tb_apb_regs;
         apb_read(32'h0000_0000, rdata);
         check("post_ext_rst_ctrl", rdata, 32'h0000_0100);
 
+        $display("=== Test 13: nc_sercom reachable via APB slot 4 (0x8000) ===");
+        // IM register (offset 0x020) is full 32-bit R/W.
+        apb_write(32'h0000_8020, 32'hCAFE_BEEF);
+        apb_read(32'h0000_8020, rdata);
+        check("sercom_im_rw", rdata, 32'hCAFE_BEEF);
+        apb_write(32'h0000_8020, 32'h0000_0000);
+        apb_read(32'h0000_8020, rdata);
+        check("sercom_im_clear", rdata, 32'h0000_0000);
+
         #100000;
 
         finalize_test();

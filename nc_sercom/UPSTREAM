@@ -1,0 +1,14 @@
+Vendored from nc_lib (https://github.com/nativechips/nc_lib).
+All files Apache-2.0.
+
+Upstream paths:
+  nc_sercom.v          <- nc_lib/nc_sercom/rtl/nc_sercom.v
+  nc_sercom_usart_tx.v <- nc_lib/nc_sercom/rtl/nc_sercom_usart_tx.v
+  nc_sercom_usart_rx.v <- nc_lib/nc_sercom/rtl/nc_sercom_usart_rx.v
+  nc_sercom_spi.v      <- nc_lib/nc_sercom/rtl/nc_sercom_spi.v
+  nc_sercom_i2c.v      <- nc_lib/nc_sercom/rtl/nc_sercom_i2c.v
+  nc_fifo.v            <- nc_lib/nc_common/rtl/nc_fifo.v
+  nc_sync.v            <- nc_lib/nc_common/rtl/nc_sync.v
+  nc_ticker.v          <- nc_lib/nc_common/rtl/nc_ticker.v
+
+To refresh: copy from the upstream paths above. No local modifications.

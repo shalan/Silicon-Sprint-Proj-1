@@ -1,0 +1,562 @@
+# Copyright (c) 2025 nativechips.ai
+# Author: Mohamed Shalan (shalan@nativechips.ai)
+# License: Apache License 2.0
+#
+# nc_sercom Register Map v2.0
+# CSR Layout Compliant: standard front-end 0x000-0x0FF, extensions 0x100+
+
+registers:
+  # ======================================================================
+  # Standard Front-End (0x000-0x0FF)
+  # ======================================================================
+
+  - name: "CR"
+    description: "Control Register"
+    address_offset: 0x000
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "EN"
+        description: "Peripheral Enable"
+        bit_range: "[0]"
+        access: "read-write"
+        reset_value: 0
+      - name: "SRST"
+        description: "Software Reset (self-clearing)"
+        bit_range: "[1]"
+        access: "write-only"
+        reset_value: 0
+      - name: "MODE"
+        description: "Protocol Mode: 00=USART, 01=SPI, 10=I2C"
+        bit_range: "[3:2]"
+        access: "read-write"
+        reset_value: 0
+      - name: "LPMEN"
+        description: "Low Power Mode Enable"
+        bit_range: "[4]"
+        access: "read-write"
+        reset_value: 0
+      - name: "DBGEN"
+        description: "Debug Enable"
+        bit_range: "[5]"
+        access: "read-write"
+        reset_value: 0
+      - name: "TXEN"
+        description: "Transmitter Enable"
+        bit_range: "[8]"
+        access: "read-write"
+        reset_value: 0
+      - name: "RXEN"
+        description: "Receiver Enable"
+        bit_range: "[9]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "SR"
+    description: "Status Register"
+    address_offset: 0x004
+    access: "read-only"
+    reset_value: 0x00000000
+    fields:
+      - name: "TXE"
+        description: "TX Empty (1=can accept data)"
+        bit_range: "[0]"
+        access: "read-only"
+        reset_value: 1
+      - name: "RXNE"
+        description: "RX Not Empty (1=data available)"
+        bit_range: "[1]"
+        access: "read-only"
+        reset_value: 0
+      - name: "BUSY"
+        description: "Busy (TX or RX active)"
+        bit_range: "[2]"
+        access: "read-only"
+        reset_value: 0
+      - name: "ERR"
+        description: "Error indication"
+        bit_range: "[3]"
+        access: "read-only"
+        reset_value: 0
+      - name: "IDLE"
+        description: "Idle (bus/line idle)"
+        bit_range: "[4]"
+        access: "read-only"
+        reset_value: 1
+      - name: "TC"
+        description: "Transfer Complete"
+        bit_range: "[5]"
+        access: "read-only"
+        reset_value: 0
+
+  - name: "DR"
+    description: "Data Register - unified TX write / RX read"
+    address_offset: 0x008
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "DATA"
+        description: "Data payload"
+        bit_range: "[31:0]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "IM"
+    description: "Interrupt Mask"
+    address_offset: 0x020
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "TXIE"
+        description: "TX Interrupt Enable"
+        bit_range: "[0]"
+        access: "read-write"
+        reset_value: 0
+      - name: "RXIE"
+        description: "RX Interrupt Enable"
+        bit_range: "[1]"
+        access: "read-write"
+        reset_value: 0
+      - name: "IDLEIE"
+        description: "Idle Interrupt Enable"
+        bit_range: "[3]"
+        access: "read-write"
+        reset_value: 0
+      - name: "ERRIE"
+        description: "Error Interrupt Enable"
+        bit_range: "[4]"
+        access: "read-write"
+        reset_value: 0
+      - name: "TCIE"
+        description: "Transfer Complete Interrupt Enable"
+        bit_range: "[6]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "RIS"
+    description: "Raw Interrupt Status"
+    address_offset: 0x024
+    access: "read-only"
+    reset_value: 0x00000000
+    fields:
+      - name: "TXRIS"
+        description: "TX Raw Status"
+        bit_range: "[0]"
+        access: "read-only"
+        reset_value: 0
+      - name: "RXRIS"
+        description: "RX Raw Status"
+        bit_range: "[1]"
+        access: "read-only"
+        reset_value: 0
+      - name: "IDLERIS"
+        description: "Idle Raw Status"
+        bit_range: "[3]"
+        access: "read-only"
+        reset_value: 0
+      - name: "ERRRIS"
+        description: "Error Raw Status"
+        bit_range: "[4]"
+        access: "read-only"
+        reset_value: 0
+      - name: "TCRIS"
+        description: "Transfer Complete Raw Status"
+        bit_range: "[6]"
+        access: "read-only"
+        reset_value: 0
+
+  - name: "MIS"
+    description: "Masked Interrupt Status"
+    address_offset: 0x028
+    access: "read-only"
+    reset_value: 0x00000000
+    fields:
+      - name: "TXMIS"
+        description: "TX Masked Status"
+        bit_range: "[0]"
+        access: "read-only"
+        reset_value: 0
+      - name: "RXMIS"
+        description: "RX Masked Status"
+        bit_range: "[1]"
+        access: "read-only"
+        reset_value: 0
+      - name: "IDLEMIS"
+        description: "Idle Masked Status"
+        bit_range: "[3]"
+        access: "read-only"
+        reset_value: 0
+      - name: "ERRMIS"
+        description: "Error Masked Status"
+        bit_range: "[4]"
+        access: "read-only"
+        reset_value: 0
+      - name: "TCMIS"
+        description: "Transfer Complete Masked Status"
+        bit_range: "[6]"
+        access: "read-only"
+        reset_value: 0
+
+  - name: "ICR"
+    description: "Interrupt Clear (Write-1-to-Clear)"
+    address_offset: 0x02C
+    access: "write-1-to-clear"
+    reset_value: 0x00000000
+    fields:
+      - name: "RXIC"
+        description: "RX Interrupt Clear"
+        bit_range: "[1]"
+        access: "write-1-to-clear"
+        reset_value: 0
+      - name: "IDLEIC"
+        description: "Idle Interrupt Clear"
+        bit_range: "[3]"
+        access: "write-1-to-clear"
+        reset_value: 0
+      - name: "ERRIC"
+        description: "Error Interrupt Clear"
+        bit_range: "[4]"
+        access: "write-1-to-clear"
+        reset_value: 0
+      - name: "TCIC"
+        description: "Transfer Complete Interrupt Clear"
+        bit_range: "[6]"
+        access: "write-1-to-clear"
+        reset_value: 0
+
+  - name: "DMACR"
+    description: "DMA Control"
+    address_offset: 0x040
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "TXDMAEN"
+        description: "TX DMA Enable"
+        bit_range: "[0]"
+        access: "read-write"
+        reset_value: 0
+      - name: "RXDMAEN"
+        description: "RX DMA Enable"
+        bit_range: "[1]"
+        access: "read-write"
+        reset_value: 0
+      - name: "TXDMATH"
+        description: "TX DMA Threshold"
+        bit_range: "[7:4]"
+        access: "read-write"
+        reset_value: 0
+      - name: "RXDMATH"
+        description: "RX DMA Threshold"
+        bit_range: "[23:16]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "TXLVL"
+    description: "TX FIFO Level"
+    address_offset: 0x044
+    access: "read-only"
+    reset_value: 0x00000000
+    fields:
+      - name: "TXLVL"
+        description: "TX FIFO level (0 to FIFO_DEPTH)"
+        bit_range: "[4:0]"
+        access: "read-only"
+        reset_value: 0
+
+  - name: "RXLVL"
+    description: "RX FIFO Level"
+    address_offset: 0x048
+    access: "read-only"
+    reset_value: 0x00000000
+    fields:
+      - name: "RXLVL"
+        description: "RX FIFO level (0 to FIFO_DEPTH)"
+        bit_range: "[4:0]"
+        access: "read-only"
+        reset_value: 0
+
+  - name: "FIFOCTRL"
+    description: "FIFO Control"
+    address_offset: 0x050
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "RXTH"
+        description: "RX Threshold"
+        bit_range: "[4:0]"
+        access: "read-write"
+        reset_value: 0
+      - name: "RXFLSH"
+        description: "RX FIFO Flush (write 1)"
+        bit_range: "[8]"
+        access: "write-only"
+        reset_value: 0
+      - name: "TXFLSH"
+        description: "TX FIFO Flush (write 1)"
+        bit_range: "[9]"
+        access: "write-only"
+        reset_value: 0
+
+  - name: "FIFOSTR"
+    description: "FIFO Status (combined levels)"
+    address_offset: 0x054
+    access: "read-only"
+    reset_value: 0x00000000
+    fields:
+      - name: "TXLVL"
+        description: "TX FIFO level"
+        bit_range: "[4:0]"
+        access: "read-only"
+        reset_value: 0
+      - name: "RXLVL"
+        description: "RX FIFO level"
+        bit_range: "[20:16]"
+        access: "read-only"
+        reset_value: 0
+
+  # ======================================================================
+  # Extension Space (0x100+) — Protocol-Specific Registers
+  # ======================================================================
+
+  - name: "MODECFG"
+    description: "Mode Configuration — protocol-specific settings, pad mux, loopback"
+    address_offset: 0x100
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "SAMPR"
+        description: "Sample Rate (USART): 00=16x, 01=8x, 10=3x"
+        bit_range: "[7:6]"
+        access: "read-write"
+        reset_value: 0
+      - name: "RXPO"
+        description: "Receive Pinout (USART)"
+        bit_range: "[9:8]"
+        access: "read-write"
+        reset_value: 0
+      - name: "TXPO"
+        description: "Transmit Pinout (USART)"
+        bit_range: "[11:10]"
+        access: "read-write"
+        reset_value: 0
+      - name: "DIPO"
+        description: "Data In Pinout (SPI CPOL/CPHA for modes: [12]=CPHA, [13]=CPOL)"
+        bit_range: "[13:12]"
+        access: "read-write"
+        reset_value: 0
+      - name: "DOPO"
+        description: "Data Out Pinout (SPI)"
+        bit_range: "[15:14]"
+        access: "read-write"
+        reset_value: 0
+      - name: "MSBFRST"
+        description: "MSB First (0=LSB first, 1=MSB first)"
+        bit_range: "[20]"
+        access: "read-write"
+        reset_value: 0
+      - name: "LOOPBACK"
+        description: "Loopback Mode (TX internally connected to RX)"
+        bit_range: "[23]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "TIMING"
+    description: "Timing Configuration — Clock Divider / Baud Rate"
+    address_offset: 0x104
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "CLKDIV"
+        description: "Clock Divider (baud = PCLK / (16 * (CLKDIV+1)) for USART)"
+        bit_range: "[15:0]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "ADDR"
+    description: "I2C Address Register"
+    address_offset: 0x108
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "SLAVE_ADDR"
+        description: "I2C Slave Address (7-bit)"
+        bit_range: "[10:0]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "FRAME"
+    description: "USART Frame Configuration"
+    address_offset: 0x10C
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "CHSIZE"
+        description: "Character Size: 00=8-bit, 01=9-bit, 10=5-bit, 11=6-bit"
+        bit_range: "[1:0]"
+        access: "read-write"
+        reset_value: 0
+      - name: "PARITY"
+        description: "Parity: 00=None, 01=Even, 10=Odd"
+        bit_range: "[5:4]"
+        access: "read-write"
+        reset_value: 0
+      - name: "SBMODE"
+        description: "Stop Bit Mode: 0=1 stop, 1=2 stops"
+        bit_range: "[6]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "I2C_CMD"
+    description: "I2C Command Register"
+    address_offset: 0x110
+    access: "write-only"
+    reset_value: 0x00000000
+    fields:
+      - name: "CMD"
+        description: "I2C Command: 00=None, 01=START, 10=STOP"
+        bit_range: "[1:0]"
+        access: "write-only"
+        reset_value: 0
+      - name: "ACKACT"
+        description: "Acknowledge Action: 0=ACK, 1=NACK"
+        bit_range: "[2]"
+        access: "write-only"
+        reset_value: 0
+
+  - name: "I2C_STATUS"
+    description: "I2C Status Register"
+    address_offset: 0x114
+    access: "read-only"
+    reset_value: 0x00000000
+    fields:
+      - name: "BUSY"
+        description: "I2C Bus Busy"
+        bit_range: "[0]"
+        access: "read-only"
+        reset_value: 0
+      - name: "ARBLOST"
+        description: "Arbitration Lost"
+        bit_range: "[1]"
+        access: "read-only"
+        reset_value: 0
+      - name: "RXNACK"
+        description: "Received NACK"
+        bit_range: "[2]"
+        access: "read-only"
+        reset_value: 0
+
+  - name: "SPI_CS"
+    description: "SPI Chip Select Control"
+    address_offset: 0x118
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "CSMASK"
+        description: "Chip Select Mask (bit 0 = CS0 active)"
+        bit_range: "[3:0]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "SPI_CFG"
+    description: "SPI Configuration"
+    address_offset: 0x11C
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "FRAMESIZE"
+        description: "Frame Size: 00=8-bit, 01=16-bit, 10=32-bit"
+        bit_range: "[1:0]"
+        access: "read-write"
+        reset_value: 0
+
+  - name: "USART_STATUS"
+    description: "USART Status Register"
+    address_offset: 0x120
+    access: "read-only"
+    reset_value: 0x00000000
+    fields:
+      - name: "TXBUSY"
+        description: "TX Busy"
+        bit_range: "[0]"
+        access: "read-only"
+        reset_value: 0
+      - name: "PERR"
+        description: "Parity Error"
+        bit_range: "[2]"
+        access: "read-only"
+        reset_value: 0
+      - name: "FERR"
+        description: "Frame Error"
+        bit_range: "[3]"
+        access: "read-only"
+        reset_value: 0
+      - name: "COLL"
+        description: "Collision (reserved, always 0)"
+        bit_range: "[4]"
+        access: "read-only"
+        reset_value: 0
+      - name: "BUFOVF"
+        description: "Buffer Overflow"
+        bit_range: "[5]"
+        access: "read-only"
+        reset_value: 0
+      - name: "BRK"
+        description: "Break Detected (sticky)"
+        bit_range: "[6]"
+        access: "read-only"
+        reset_value: 0
+
+  - name: "USART_RXTO"
+    description: "USART RX Timeout Threshold (reserved for future use)"
+    address_offset: 0x124
+    access: "read-write"
+    reset_value: 0x00000000
+    fields:
+      - name: "RXTO"
+        description: "RX Timeout threshold in baud-tick units"
+        bit_range: "[15:0]"
+        access: "read-write"
+        reset_value: 0
+
+  # ======================================================================
+  # Discovery Registers
+  # ======================================================================
+
+  - name: "FEATURE"
+    description: "Feature Register — IP capability bitmap"
+    address_offset: 0xFF8
+    access: "read-only"
+    reset_value: 0x0000000F
+    fields:
+      - name: "HAS_USART"
+        description: "USART support"
+        bit_range: "[0]"
+        access: "read-only"
+        reset_value: 1
+      - name: "HAS_SPI"
+        description: "SPI support"
+        bit_range: "[1]"
+        access: "read-only"
+        reset_value: 1
+      - name: "HAS_I2C"
+        description: "I2C support"
+        bit_range: "[2]"
+        access: "read-only"
+        reset_value: 1
+      - name: "HAS_DMA"
+        description: "DMA support"
+        bit_range: "[3]"
+        access: "read-only"
+        reset_value: 1
+
+  - name: "ID"
+    description: "IP Identification — ASCII 'SERC'"
+    address_offset: 0xFFC
+    access: "read-only"
+    reset_value: 0x53455243
+    fields:
+      - name: "ID"
+        description: "ASCII signature"
+        bit_range: "[31:0]"
+        access: "read-only"
+        reset_value: 0x53455243
