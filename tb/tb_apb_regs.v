@@ -103,6 +103,10 @@ module tb_apb_regs;
         apb_read(32'h0000_200C, rdata);
         $display("[%0t] Ref freq cnt[0x200C] = 0x%08h", $time, rdata);
 
+        apb_read(32'h0000_2010, rdata);
+        $display("[%0t] IRQ status[0x2010] = 0x%08h", $time, rdata);
+        check("irq_status_idle", rdata, 32'h0000_0000);
+
         $display("=== Test 11: USB FIFO write ===");
         apb_write(32'h0000_4000, 32'h0000_0048);
         apb_write(32'h0000_4000, 32'h0000_0065);

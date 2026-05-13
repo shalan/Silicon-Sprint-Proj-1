@@ -15,6 +15,11 @@
 //   0x04 : FLL freq counter — FLL clk edges in last window
 //   0x08 : RC16M freq counter — RC16M clk edges in last window
 //   0x0C : REF freq counter — xclk edges in last window
+//   0x10 : IRQ status — synchronised peripheral interrupt-request lines
+//          [0]  irq_attoio   (AttoIO irq_to_host)
+//          [1]  irq_sercom   (nc_sercom irq_o)
+//          [31:2] reserved
+//          Read-only. Bits clear when the source peripheral deasserts.
 
 `timescale 1ns / 1ps
 `default_nettype none
@@ -41,24 +46,31 @@ module apb_status #(
     input  wire         rc16m_en_sts,
     input  wire         rc500k_en_sts,
     input  wire  [2:0]  sel_mon_sts,
-    input  wire         fll_bypass_sts
+    input  wire         fll_bypass_sts,
+    input  wire         irq_attoio_in,
+    input  wire         irq_sercom_in
 );
 
     assign PREADY  = 1'b1;
     assign PSLVERR = 1'b0;
 
     reg [1:0] fll96m_sync, fll48m_sync, rc16m_sync, rc500k_sync;
+    reg [1:0] irq_attoio_sync, irq_sercom_sync;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
-            fll96m_sync  <= 2'b00;
-            fll48m_sync  <= 2'b00;
-            rc16m_sync   <= 2'b00;
-            rc500k_sync  <= 2'b00;
+            fll96m_sync     <= 2'b00;
+            fll48m_sync     <= 2'b00;
+            rc16m_sync      <= 2'b00;
+            rc500k_sync     <= 2'b00;
+            irq_attoio_sync <= 2'b00;
+            irq_sercom_sync <= 2'b00;
         end else begin
-            fll96m_sync  <= {fll96m_sync[0],  fll_clk96m_in};
-            fll48m_sync  <= {fll48m_sync[0],  fll_clk48m_in};
-            rc16m_sync   <= {rc16m_sync[0],   rc16m_clk_in};
-            rc500k_sync  <= {rc500k_sync[0],  rc500k_clk_in};
+            fll96m_sync     <= {fll96m_sync[0],     fll_clk96m_in};
+            fll48m_sync     <= {fll48m_sync[0],     fll_clk48m_in};
+            rc16m_sync      <= {rc16m_sync[0],      rc16m_clk_in};
+            rc500k_sync     <= {rc500k_sync[0],     rc500k_clk_in};
+            irq_attoio_sync <= {irq_attoio_sync[0], irq_attoio_in};
+            irq_sercom_sync <= {irq_sercom_sync[0], irq_sercom_in};
         end
     end
 
@@ -117,6 +129,7 @@ module apb_status #(
             13'h04: PRDATA = fll_cnt_latch;
             13'h08: PRDATA = rc16m_cnt_latch;
             13'h0C: PRDATA = ref_cnt_latch;
+            13'h10: PRDATA = {30'd0, irq_sercom_sync[1], irq_attoio_sync[1]};
             default: PRDATA = 32'd0;
         endcase
     end

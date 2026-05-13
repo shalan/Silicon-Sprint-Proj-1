@@ -35,7 +35,7 @@
 //
 // APB address map (via UART APB master, 8 KB slots):
 //   0x0000: Clock control (FLL, RC OSC enables, dividers, muxes, USB pad)
-//   0x2000: Status registers (freq counters, sync'd status)
+//   0x2000: Status registers (freq counters, sync'd status, IRQ status @ 0x2010)
 //   0x4000: USB CDC FIFO (read/write bytes)
 //   0x6000: AttoIO I/O processor (11-bit internal address space)
 //   0x8000: nc_sercom (USART/SPI/I2C, 12-bit internal address space)
@@ -363,7 +363,9 @@ module project_macro #(
         .rc16m_en_sts  (rc16m_en),
         .rc500k_en_sts (rc500k_en),
         .sel_mon_sts   (sel_mon),
-        .fll_bypass_sts(fll_bypass)
+        .fll_bypass_sts(fll_bypass),
+        .irq_attoio_in (attoio_irq),
+        .irq_sercom_in (sercom_irq)
     );
 
     wire [7:0] fifo_in_data;
@@ -421,13 +423,15 @@ module project_macro #(
     // ----------------------------------------------------------------------
     // nc_sercom — multi-protocol serial peripheral (USART/SPI/I2C).
     // APB slot 4 (0x8000). 6 pads on the right edge gpio_rt[7:2].
-    // irq_o and DMA requests are not consumed in this design.
+    // irq_o is exposed via the chip-level IRQ status register at 0x2010;
+    // DMA requests are not consumed in this design.
     // Vendored from github.com/nativechips/nc_lib (Apache-2.0); see
     // nc_sercom/UPSTREAM for provenance.
     // ----------------------------------------------------------------------
     wire [5:0] sercom_pad_out;
     wire [5:0] sercom_pad_oe;
     wire [5:0] sercom_pad_in;
+    wire       sercom_irq;
 
     nc_sercom #(
         .FIFO_DEPTH (16)
@@ -443,7 +447,7 @@ module project_macro #(
         .PREADY       (S4_PREADY),
         .PSLVERR      (S4_PSLVERR),
 
-        .irq_o        (/* unconnected */),
+        .irq_o        (sercom_irq),
         .dma_tx_req_o (/* unconnected */),
         .dma_rx_req_o (/* unconnected */),
 
