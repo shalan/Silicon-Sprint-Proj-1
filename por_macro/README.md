@@ -28,7 +28,7 @@ only; it is **not** used as a system reset elsewhere in the chip.
                           └──────────────┘                │
                                                           ▼
                           ┌───────────────────────────────────────┐
-                          │  ADPOR (4 × 24-bit shift registers,   │
+                          │  ADPOR (4 × 20-bit shift registers,   │
                           │   2 fed with '1, 2 fed with '0;        │
                           │   AND of four comparators = rst_n)    │
                           └───────────────────────────────────────┘
@@ -39,15 +39,15 @@ only; it is **not** used as a system reset elsewhere in the chip.
 
 ## Pulse-width budget
 
-`Pulse = LENGTH × T_POR_CLK = 24 × (T_RO × 64)`
+`Pulse = LENGTH × T_POR_CLK = 20 × (T_RO × 64)`
 
 | Corner | RO     | POR-clk  | Pulse width |
 |--------|--------|----------|-------------|
-| FF     | ~130 MHz | ~2.0 MHz | **~12 µs** |
-| TT     | ~62 MHz  | ~1.0 MHz | **~25 µs** (nominal) |
-| SS     | ~30 MHz  | ~0.5 MHz | **~51 µs** |
+| FF     | ~130 MHz | ~2.0 MHz | **~10 µs** |
+| TT     | ~62 MHz  | ~1.0 MHz | **~20.5 µs** (nominal) |
+| SS     | ~30 MHz  | ~0.5 MHz | **~42 µs** |
 
-Behavioral simulation produces **~24 µs** (matches TT prediction).
+Behavioral simulation produces **~19.8 µs** (matches TT prediction).
 
 ## Cell budget (pre-layout)
 
@@ -55,9 +55,9 @@ Behavioral simulation produces **~24 µs** (matches TT prediction).
 |--------------------|-------|
 | Ring oscillator    | 20    |
 | /64 divider        | ~8    |
-| ADPOR shift regs   | 96 (4 × 24 dfrtp) |
-| ADPOR comparators  | ~16   |
-| **Total**          | **~140–150** |
+| ADPOR shift regs   | 80 (4 × 20 dfrtp) |
+| ADPOR comparators  | ~14   |
+| **Total**          | **~120–130** |
 
 ## Self-disable / power profile
 
