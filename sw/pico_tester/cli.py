@@ -2,7 +2,8 @@ from uart_apb import APBMaster
 from clock_gen import ClockGen
 from freq_counter import FreqCounter
 from reset_ctrl import ResetCtrl
-from chip_cmds import ChipCtrl, MON_FLL, MON_RC16M, MON_RC500K, MON_CLK, MON_CLK48M
+from chip_cmds import (ChipCtrl, Sercom,
+                       MON_FLL, MON_RC16M, MON_RC500K, MON_CLK, MON_CLK48M)
 from test_suite import run_tests
 import utime
 
@@ -11,14 +12,16 @@ clk = None
 fcnt = None
 rst = None
 chip = None
+sercom = None
 
 def init():
-    global apb, clk, fcnt, rst, chip
+    global apb, clk, fcnt, rst, chip, sercom
     apb = APBMaster(id=0, baud=57600, tx=0, rx=1)
     clk = ClockGen(pin=2, target_mhz=12)
     fcnt = FreqCounter()
     rst = ResetCtrl(pin=8)
     chip = ChipCtrl(apb)
+    sercom = Sercom(apb)
 
 def cmd_help(args):
     print("""Commands:
@@ -43,6 +46,10 @@ def cmd_help(args):
   ctrl                     - Read CTRL register
   usb status               - Check USB configured pin
   usb write <hex_bytes>    - Write bytes to USB FIFO
+  irq                      - Read chip-level IRQ status (0x2010)
+  sercom read <off>        - sercom register read  (off = 0x000..0x1FF)
+  sercom write <off> <val> - sercom register write
+  sercom loopback [hex]    - Internal USART loopback round-trip
   test                     - Run bring-up test suite
   help                     - This message""")
 
@@ -231,7 +238,35 @@ def cmd_usb(args):
         print("Wrote %d bytes to USB FIFO" % len(data))
 
 def cmd_test(args):
-    run_tests(apb, chip, rst, clk, fcnt)
+    run_tests(apb, chip, rst, clk, fcnt, sercom=sercom)
+
+def cmd_irq(args):
+    irq = chip.irq_pending()
+    print("IRQ status[0x2010] = 0x%08X  attoio=%s sercom=%s" %
+          (irq["raw"], irq["attoio"], irq["sercom"]))
+
+def cmd_sercom(args):
+    if not args:
+        print("Usage: sercom read <off> | write <off> <val> | loopback [hex]")
+        return
+    sub = args[0]
+    if sub == "read" and len(args) >= 2:
+        off = int(args[1], 0)
+        print("sercom 0x%03X = 0x%08X" % (off, sercom.read(off)))
+    elif sub == "write" and len(args) >= 3:
+        off = int(args[1], 0); val = int(args[2], 0)
+        sercom.write(off, val)
+        print("sercom 0x%03X <- 0x%08X" % (off, val))
+    elif sub == "loopback":
+        payload = bytes.fromhex(args[1]) if len(args) >= 2 else None
+        ok, sent, recv, info = sercom.usart_loopback_test(payload=payload)
+        print("baud target=%d actual=%d (CLKDIV=%d)" %
+              (info["baud_target"], info["baud_actual"], info["clkdiv"]))
+        print("sent     = %s" % sent.hex())
+        print("received = %s" % recv.hex())
+        print("result   = %s" % ("PASS" if ok else "FAIL"))
+    else:
+        print("Usage: sercom read <off> | write <off> <val> | loopback [hex]")
 
 COMMANDS = {
     "help": cmd_help,
@@ -249,6 +284,8 @@ COMMANDS = {
     "status": cmd_status,
     "ctrl": cmd_ctrl,
     "usb": cmd_usb,
+    "irq": cmd_irq,
+    "sercom": cmd_sercom,
     "test": cmd_test,
 }
 

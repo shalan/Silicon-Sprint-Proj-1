@@ -121,6 +121,19 @@ Connect the Pico to the test chip using jumper wires:
   GND              ────────────  GND
 ```
 
+### Chip-side pads not currently wired to the Pico
+
+These exist on the chip but the Pico-tester does not exercise them
+directly. Hook them up if you want to scope/measure or interact with
+the on-chip peripheral through the package pins.
+
+| Chip pad        | Signal       | Notes |
+|-----------------|--------------|-------|
+| `gpio_bot[12]`  | `adpor_mon`  | All-digital PoR pulse (~20.5 µs at TT). Pure monitor output; wire to a free GPIO + scope channel to watch the pulse on every power cycle. |
+| `gpio_rt[2..7]` | `sercom_pad[0..5]` | nc_sercom USART/SPI/I2C pads. Wire up to drive a real serial device, **or** use the internal-loopback self-test (`sercom loopback`) which needs no external pins. |
+| `gpio_top[0..13]` | `attoio_gpio[13:0]` | AttoIO GPIOs (driven by the on-chip RV32EC firmware). Not used by the Pico tester. |
+| `gpio_bot[13..14]`, `gpio_rt[0,1,8]` | spare | Unused. |
+
 **Important:**
 - Connect GND between Pico and chip first
 - Do NOT connect 3V3 unless the chip has no other power source
@@ -281,10 +294,35 @@ the frequency below the PIO counter's maximum rate (~5 MHz).
 > reset 100                    # Pulse ext_rst_n for 100ms
 ```
 
+### IRQ status (chip-level aggregator)
+
+```
+> irq                          # Read 0x2010
+                               # -> "IRQ status[0x2010] = 0x00000000 attoio=False sercom=False"
+```
+
+Bit 0 = AttoIO `irq_to_host`, bit 1 = nc_sercom `irq_o`. Poll-only; bits
+clear when the source peripheral deasserts.
+
+### nc_sercom (USART / SPI / I2C, APB slot 4 at 0x8000)
+
+```
+> sercom read 0x000             # Read CR
+> sercom read 0xFFC             # Read ID register
+> sercom write 0x020 0xDEADBEEF # Write IM
+> sercom loopback               # Internal USART loopback round-trip
+> sercom loopback 5AA500FF      # Loopback with custom payload (hex)
+```
+
+The `sercom loopback` command needs **no external wiring**: it sets the
+LOOPBACK bit in MODECFG (0x123 internal), enables USART mode at
+115 200 baud (CLKDIV ≈ 6), pushes the bytes through DR, and reads them
+back through the same DR.
+
 ### Automated Testing
 
 ```
-> test                         # Run 10-test bring-up suite
+> test                         # Run 12-test bring-up suite
 ```
 
 This will:
@@ -298,6 +336,8 @@ This will:
 8. Test USB FIFO
 9. Test external reset
 10. Verify AttoIO register access
+11. Read IRQ status (expect 0 at idle)
+12. nc_sercom reachability + USART loopback round-trip
 
 ## 7. Typical Bring-Up Sequence
 

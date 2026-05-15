@@ -1,4 +1,7 @@
-def run_tests(apb, chip, reset, clk, fcnt):
+import utime
+
+
+def run_tests(apb, chip, reset, clk, fcnt, sercom=None):
     results = []
 
     def check(name, cond):
@@ -88,6 +91,45 @@ def run_tests(apb, chip, reset, clk, fcnt):
         check("AttoIO accessible", True)
     except Exception as e:
         check("AttoIO: %s" % e, False)
+
+    # ------------------------------------------------------------------
+    # New: IRQ status aggregator (0x2010). At rest, no peripheral should
+    # be asserting an IRQ, so the register reads 0.
+    # ------------------------------------------------------------------
+    print("--- Test 11: IRQ status idle ---")
+    try:
+        irq = chip.irq_pending()
+        print("    IRQ status[0x2010] = 0x%08X" % irq["raw"])
+        check("IRQ idle at reset", irq["raw"] == 0x00000000)
+    except Exception as e:
+        check("IRQ status: %s" % e, False)
+
+    # ------------------------------------------------------------------
+    # New: nc_sercom reachability + internal USART loopback round-trip.
+    # Uses the LOOPBACK bit in MODECFG so no external wiring is needed.
+    # ------------------------------------------------------------------
+    print("--- Test 12: nc_sercom reachable + USART loopback ---")
+    if sercom is None:
+        check("sercom driver not wired in", False)
+    else:
+        try:
+            # IM register is full 32-bit R/W — quick reachability ping.
+            sercom.write(0x020, 0xCAFEBEEF)
+            got = sercom.read(0x020)
+            check("sercom IM R/W (0x8020)", got == 0xCAFEBEEF)
+            sercom.write(0x020, 0x00000000)
+
+            ok, sent, recv, info = sercom.usart_loopback_test(
+                payload=b"\x5A\xA5\x00\xFF\x12\x34\x56\x78",
+                baud=115200,
+            )
+            print("    sercom USART: baud target=%d actual=%d (CLKDIV=%d)" %
+                  (info["baud_target"], info["baud_actual"], info["clkdiv"]))
+            print("    sent     = %s" % sent.hex())
+            print("    received = %s" % recv.hex())
+            check("USART loopback round-trip", ok)
+        except Exception as e:
+            check("sercom: %s" % e, False)
 
     clk.stop()
 
