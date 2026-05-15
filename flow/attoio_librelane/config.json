@@ -35,10 +35,10 @@
     "PNR_SDC_FILE":     "dir::attoio_pnr.sdc",
     "SIGNOFF_SDC_FILE": "dir::attoio_signoff.sdc",
 
-    "//-floorplan": "N and S each carry ~84/88 pins (slim wrapper). Aspect 1.4 widens N face headroom while keeping the macro comfortably narrower than project_macro (~485 um vs 880 um).",
+    "//-floorplan": "N and S each carry ~84/88 pins (slim wrapper). Aspect 2.0 makes the macro short and wide -- max N-face headroom for the pad bus, while still narrower than project_macro (~580 um vs 880 um).",
     "FP_SIZING":       "relative",
     "FP_CORE_UTIL":    70,
-    "FP_ASPECT_RATIO": 1.4,
+    "FP_ASPECT_RATIO": 2.0,
     "FP_CORE_MARGIN":  5,
 
     "FP_PIN_ORDER_CFG": "dir::pin_order.cfg",
