@@ -1,0 +1,66 @@
+# AttoIO — project-level hardening override
+
+Project-specific LibreLane / OpenLane config for the AttoIO macro that
+constrains pin placement to **two opposite sides** for clean abutment
+inside `project_macro`.
+
+## Why a project-level override?
+
+The upstream config in `AttoIO/flow/librelane/` distributes pins across
+all four sides of the macro (pad_* split N/E, APB on S, hp_* on W).
+For this chip we want:
+
+```
+                ┌──────────────────────────────┐
+   gpio_top ───►│  N (176 pins: pad_*)         │
+   pad ring     │                              │
+                │           AttoIO             │
+                │       (RV32 + 1KB DFFRAM)    │
+                │                              │
+                │  S (88 pins: APB + clk/rst) ◄│─── apb_splitter
+                └──────────────────────────────┘
+                       (E,W: unused hp_*)
+```
+
+This makes the integration step at project_macro level trivial: all
+GPIO routes go upward to the top pad ring, all APB routes go downward
+to the bus, no crossing.
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `config.json` | LibreLane config; reuses AttoIO RTL from the submodule via `dir::../../AttoIO/...` paths. |
+| `pin_order.cfg` | Constrains pad_* → N, APB+clk+rst+irq → S, hp_* → E/W. |
+| `attoio_pnr.sdc` | P&R constraints (copied from `AttoIO/flow/librelane/`). |
+| `attoio_signoff.sdc` | Sign-off STA constraints. |
+
+The upstream `AttoIO/flow/librelane/` is left untouched so the AttoIO
+submodule remains usable standalone.
+
+## Running
+
+With the existing OpenLane 2.2.9 in the nix store:
+
+```bash
+export PDK_ROOT=$HOME/.volare/volare/sky130/versions/0fe599b2afb6708d281543108caf8310912f54af
+/nix/store/70vzqyyj1nvg3gxdi553xmcrajjydknm-python3.12-openlane-2.2.9/bin/openlane \
+    --pdk-root "$PDK_ROOT" \
+    --run-tag attoio-2side \
+    flow/attoio_librelane/config.json
+```
+
+Outputs land in `runs/attoio-2side/` next to the config.
+
+## Floorplan sizing notes
+
+- Pin count constraint: N side carries 176 pins (pad_in[15:0],
+  pad_out[15:0], pad_oe[15:0], pad_ctl[127:0]). At a typical 4 µm
+  pitch in the M2/M3 layer, the macro needs ≥ ~700 µm of width on
+  the N face.
+- Cell area: AttoIO with the two DFFRAMs synthesises into ~22 k
+  cells at ~5 µm²/cell average → ~110 000 µm² of cell area. At
+  `FP_CORE_UTIL = 70`, the core box should be ~155 000 µm².
+- `FP_ASPECT_RATIO = 1.8` gives roughly a 530 × 295 µm core, which
+  satisfies both constraints with some margin. Bump if routing
+  congests on the N face.
