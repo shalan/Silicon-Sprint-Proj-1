@@ -247,35 +247,30 @@ module project_macro #(
         .en(1'b1), .div_ratio(16'd0), .clk_out(attoio_clk_iop)
     );
 
-    attoio_macro #(
+    // Thin project-side wrapper around attoio_macro that hides the unused
+    // hp0/hp1/hp2 host-peripheral bundles (144 unused ports collapsed).
+    // The hardened LEF/LIB target is `attoio_wrap`, which has a two-side
+    // pin layout (pad_* north, APB+clk+rst+irq south).
+    attoio_wrap #(
         .NGPIO(16)
     ) u_attoio (
-        .sysclk   (xclk),
-        .clk_iop  (attoio_clk_iop),
-        .rst_n    (rst_n),
-        .PADDR    (S3_PADDR[10:0]),
-        .PSEL     (S3_PSEL),
-        .PENABLE  (S3_PENABLE),
-        .PWRITE   (S3_PWRITE),
-        .PWDATA   (S3_PWDATA),
-        .PSTRB    (S3_PWRITE ? 4'b1111 : 4'b0000),
-        .PRDATA   (S3_PRDATA),
-        .PREADY   (S3_PREADY),
-        .PSLVERR  (S3_PSLVERR),
-        .pad_in   (attoio_pad_in),
-        .pad_out  (attoio_pad_out),
-        .pad_oe   (attoio_pad_oe),
-        .pad_ctl  (attoio_pad_ctl),
-        .hp0_out  ({16{1'b0}}),
-        .hp0_oe   ({16{1'b0}}),
-        .hp0_in   (),
-        .hp1_out  ({16{1'b0}}),
-        .hp1_oe   ({16{1'b0}}),
-        .hp1_in   (),
-        .hp2_out  ({16{1'b0}}),
-        .hp2_oe   ({16{1'b0}}),
-        .hp2_in   (),
-        .irq_to_host(attoio_irq)
+        .sysclk      (xclk),
+        .clk_iop     (attoio_clk_iop),
+        .rst_n       (rst_n),
+        .PADDR       (S3_PADDR[10:0]),
+        .PSEL        (S3_PSEL),
+        .PENABLE     (S3_PENABLE),
+        .PWRITE      (S3_PWRITE),
+        .PWDATA      (S3_PWDATA),
+        .PSTRB       (S3_PWRITE ? 4'b1111 : 4'b0000),
+        .PRDATA      (S3_PRDATA),
+        .PREADY      (S3_PREADY),
+        .PSLVERR     (S3_PSLVERR),
+        .pad_in      (attoio_pad_in),
+        .pad_out     (attoio_pad_out),
+        .pad_oe      (attoio_pad_oe),
+        .pad_ctl     (attoio_pad_ctl),
+        .irq_to_host (attoio_irq)
     );
 
     uart_apb_sys #(

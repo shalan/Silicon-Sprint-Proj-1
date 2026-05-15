@@ -1,25 +1,24 @@
-# AttoIO — project-level hardening override
+# attoio_wrap — project-level hardening override
 
-Project-specific LibreLane / OpenLane config for the AttoIO macro that
-constrains pin placement to **two opposite sides** for clean abutment
-inside `project_macro`.
+Project-specific LibreLane / OpenLane config for `attoio_wrap`, a thin
+wrapper (rtl/attoio_wrap.v) that instantiates the upstream `attoio_macro`
+and hides its unused `hp0/hp1/hp2` host-peripheral bundles (144 ports
+dropped). The hardened macro therefore has a clean **two-side** pin
+layout with nothing on E or W.
 
-## Why a project-level override?
-
-The upstream config in `AttoIO/flow/librelane/` distributes pins across
-all four sides of the macro (pad_* split N/E, APB on S, hp_* on W).
-For this chip we want:
+## Floorplan
 
 ```
                 ┌──────────────────────────────┐
    gpio_top ───►│  N (176 pins: pad_*)         │
    pad ring     │                              │
-                │           AttoIO             │
-                │       (RV32 + 1KB DFFRAM)    │
+                │       attoio_wrap            │
+                │  (wrapper -> attoio_macro,   │
+                │   RV32 + 1KB DFFRAM)         │
                 │                              │
                 │  S (88 pins: APB + clk/rst) ◄│─── apb_splitter
                 └──────────────────────────────┘
-                       (E,W: unused hp_*)
+                       (E,W: empty)
 ```
 
 This makes the integration step at project_macro level trivial: all

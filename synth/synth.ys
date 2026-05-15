@@ -2,6 +2,7 @@ read_liberty -lib -ignore_miss_func /Users/mshalan/work/pdks/volare/sky130/versi
 
 read_verilog \
     rtl/project_macro.v \
+    rtl/attoio_wrap.v \
     rtl/fll_top.v \
     rtl/apb_clk_ctrl.v \
     rtl/apb_status.v \

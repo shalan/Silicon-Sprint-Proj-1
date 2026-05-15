@@ -1,13 +1,14 @@
 {
-    "DESIGN_NAME": "attoio_macro",
+    "DESIGN_NAME": "attoio_wrap",
 
-    "//": "Project-level hardening override for AttoIO. Reuses the AttoIO",
-    "//-": "submodule RTL but constrains pin placement to two opposite sides:",
-    "//--": "  N = pad_* (faces project_macro top edge / IO ring)",
-    "//---": "  S = APB + clocks + irq (faces apb_splitter)",
-    "//----": "E/W house the unused hp0/hp1/hp2 host-peripheral bundles.",
+    "//": "Project-level hardening override. Targets attoio_wrap (rtl/attoio_wrap.v)",
+    "//-": "which hides the unused hp0/hp1/hp2 host-peripheral bundles. The macro",
+    "//--": "ends up with a clean two-side pin layout:",
+    "//---": "  N = pad_* (faces project_macro top edge / IO ring)",
+    "//----": "  S = APB + clocks + irq (faces apb_splitter)",
 
     "VERILOG_FILES": [
+        "dir::../../rtl/attoio_wrap.v",
         "dir::../../AttoIO/rtl/attoio_apb_if.v",
         "dir::../../AttoIO/rtl/attoio_memmux.v",
         "dir::../../AttoIO/rtl/attoio_gpio.v",

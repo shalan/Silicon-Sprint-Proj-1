@@ -38,6 +38,7 @@ endif
 
 RTL_SRCS = \
 	$(RTL_DIR)/project_macro.v \
+	$(RTL_DIR)/attoio_wrap.v \
 	$(RTL_DIR)/fll_top.v \
 	$(RTL_DIR)/fll_sim.v \
 	$(RTL_DIR)/apb_clk_ctrl.v \
