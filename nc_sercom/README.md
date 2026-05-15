@@ -1,5 +1,5 @@
 <!--
-Copyright (c) 2025 nativechips.ai
+Copyright (c) 2025-2026 nativechips.ai
 Author: SERCOM Development Team
 License: Apache License 2.0
 -->

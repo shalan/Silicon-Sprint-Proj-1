@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 //==============================================================================
-// Copyright (c) 2025 nativechips.ai
+// Copyright (c) 2025-2026 nativechips.ai
 // Author: Mohamed Shalan <shalan@nativechips.ai>
 // SPDX-License-Identifier: Apache-2.0
 //==============================================================================

@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 //==============================================================================
-// Copyright (c) 2025 nativechips.ai
+// Copyright (c) 2025-2026 nativechips.ai
 // Author: Mohamed Shalan <shalan@nativechips.ai>
 // SPDX-License-Identifier: Apache-2.0
 //==============================================================================
@@ -558,12 +558,6 @@ module nc_sercom #(
             spi_cfg_reg   <= 32'h0000_0000;
             usart_rxto_reg <= 32'h0000_0000;
 
-            tx_ris_q     <= 1'b0;
-            rx_ris_q     <= 1'b0;
-            idle_ris_q   <= 1'b0;
-            err_ris_q    <= 1'b0;
-            tc_ris_q     <= 1'b0;
-
             usart_perr   <= 1'b0;
             usart_ferr   <= 1'b0;
             usart_bufovf <= 1'b0;
@@ -601,13 +595,11 @@ module nc_sercom #(
                     default: ;
                 endcase
 
-                // ICR: Write-1-to-clear
-                if (word_addr == ADDR_ICR) begin
-                    if (PWDATA[1])  rx_ris_q   <= 1'b0;
-                    if (PWDATA[3])  idle_ris_q <= 1'b0;
-                    if (PWDATA[4])  err_ris_q  <= 1'b0;
-                    if (PWDATA[6])  tc_ris_q   <= 1'b0;
-                end
+                // ICR W1C handling for RIS flops lives in the dedicated
+                // RIS-flag block below — keeping it in one place keeps
+                // each flop single-driven, which Yosys requires (multi-
+                // driven flops were silently resolved to constant 0
+                // before this refactor).
 
                 // USART_STATUS: Write-1-to-clear for sticky bits
                 if (word_addr == ADDR_USART_STATUS) begin
@@ -679,6 +671,27 @@ module nc_sercom #(
     //==========================================================================
     // Interrupt Flag Generation
     //==========================================================================
+    // Every RIS flop is driven from EXACTLY this one always block. The
+    // prior implementation split reset/event-set into this block and
+    // ICR-clear into the register-write block; iverilog tolerated the
+    // resulting double-driver via last-write-wins, but Yosys 0.57
+    // correctly flagged "Driver-driver conflict ... Resolved using
+    // constant" and silently dropped the flop driver, leaving all five
+    // RIS bits tied to 0 in the synthesized netlist. Keep this block
+    // single-source-of-truth for each RIS flop.
+    //
+    // ICR bit map (per nc_sercom.reg.yaml):
+    //   bit 1: RXIC   -> clears rx_ris_q  for one cycle
+    //   bit 3: IDLEIC -> clears idle_ris_q for one cycle
+    //   bit 4: ERRIC  -> clears err_ris_q (sticky)
+    //   bit 6: TCIC   -> clears tc_ris_q  (sticky)
+    //   bit 0 (tx_ris_q) is deliberately NOT in ICR — tx is pure level.
+    wire icr_write = apb_write && (word_addr == ADDR_ICR);
+    wire icr_clr_rx   = icr_write && PWDATA[1];
+    wire icr_clr_idle = icr_write && PWDATA[3];
+    wire icr_clr_err  = icr_write && PWDATA[4];
+    wire icr_clr_tc   = icr_write && PWDATA[6];
+
     always @(posedge PCLK or negedge PRESETn) begin
         if (!PRESETn) begin
             tx_ris_q   <= 1'b0;
@@ -687,23 +700,30 @@ module nc_sercom #(
             err_ris_q  <= 1'b0;
             tc_ris_q   <= 1'b0;
         end else begin
-            // TX-empty / RX-not-empty / IDLE are LEVEL-sensitive — they
-            // track the underlying state continuously (existing
-            // test_irq_level_sensitive and test_idle_irq depend on this).
+            // Level-sensitive bits track the source continuously. An ICR
+            // write that targets them forces 0 for this cycle; next cycle
+            // they re-sample the source and may re-assert if it's still
+            // high. Existing test_irq_level_sensitive / test_idle_irq
+            // depend on the re-assert behavior.
             tx_ris_q   <= tx_fifo_empty;
-            rx_ris_q   <= ~rx_fifo_empty;
-            idle_ris_q <= sr_idle && ~sr_busy;
-            // TC / ERR are EVENTS — the combinational sources are 1-cycle
-            // pulses (e.g., usart_tx_done, usart_frame_err). Latch on
-            // pulse and clear only via ICR W1C (handled in the register-
-            // write block above). Without this, software can never catch
-            // a 1-cycle event. (Same bug pattern as USART PERR/FERR in
-            // commit 0cbf9d3.)
-            if (sr_tc)  tc_ris_q  <= 1'b1;
-            if (sr_err) err_ris_q <= 1'b1;
-            // ICR W1C clears land in this same always block — see the
-            // ADDR_ICR write-decode above. Their NBA assignments override
-            // the set above when the corresponding PWDATA bit is high.
+            rx_ris_q   <= icr_clr_rx   ? 1'b0 : ~rx_fifo_empty;
+            idle_ris_q <= icr_clr_idle ? 1'b0 : (sr_idle && ~sr_busy);
+
+            // Event/sticky bits: ICR W1C wins over event-set when both
+            // happen on the same cycle (per spec). Otherwise sticky-set
+            // on the 1-cycle pulse from the protocol engines and hold.
+            // Without this latching, software could never catch a
+            // 1-cycle event (same bug pattern as USART PERR/FERR in
+            // commit 0cbf9d3).
+            if (icr_clr_err)
+                err_ris_q <= 1'b0;
+            else if (sr_err)
+                err_ris_q <= 1'b1;
+
+            if (icr_clr_tc)
+                tc_ris_q <= 1'b0;
+            else if (sr_tc)
+                tc_ris_q <= 1'b1;
         end
     end
 

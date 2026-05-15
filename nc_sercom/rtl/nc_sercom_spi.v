@@ -1,7 +1,7 @@
 `timescale 1ns/1ps
 
 //==============================================================================
-// Copyright (c) 2025 nativechips.ai
+// Copyright (c) 2025-2026 nativechips.ai
 // Author: Mohamed Shalan <shalan@nativechips.ai>
 // SPDX-License-Identifier: Apache-2.0
 //==============================================================================
@@ -61,6 +61,23 @@ module nc_sercom_spi #(
     output wire        mosi_oe_o,
     input  wire        miso_in_i
 );
+
+    //==========================================================================
+    // MISO synchronizer (CDC)
+    //==========================================================================
+    // miso_in_i comes from an external pad asynchronous to PCLK. Sampling
+    // it straight into the rx shift register is a metastability hazard.
+    // Use the same 2-FF synchronizer pattern that nc_sercom_usart_rx.v
+    // and nc_sercom_i2c.v already apply to their async inputs.
+    wire miso_sync;
+    nc_sync #(
+        .NUM_STAGES(2)
+    ) u_miso_sync (
+        .clk   (clk),
+        .rst_n (rst_n),
+        .in    (miso_in_i),
+        .out   (miso_sync)
+    );
 
     //==========================================================================
     // Frame Size Configuration
@@ -215,9 +232,9 @@ module nc_sercom_spi #(
                     // Sample MISO on sample edge
                     if (sample_edge) begin
                         if (msbfirst)
-                            rx_shift_reg <= {rx_shift_reg[30:0], miso_in_i};
+                            rx_shift_reg <= {rx_shift_reg[30:0], miso_sync};
                         else
-                            rx_shift_reg <= {miso_in_i, rx_shift_reg[31:1]};
+                            rx_shift_reg <= {miso_sync, rx_shift_reg[31:1]};
 
                         if (bit_counter == bit_count - 1) begin
                             state <= STATE_HOLD;
