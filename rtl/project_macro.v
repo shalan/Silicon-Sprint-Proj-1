@@ -235,10 +235,14 @@ module project_macro #(
     // but we deliberately route only 14 of the GPIOs out to top-edge pads
     // so the macro stays on a single side of the pad ring.
     // attoio_pad[15:14] are tied off internally and never reach a pin.
-    wire [15:0] attoio_pad_in;
-    wire [15:0] attoio_pad_out;        // [15:14] left unconnected
-    wire [15:0] attoio_pad_oe;         // [15:14] left unconnected
-    wire [127:0] attoio_pad_ctl;       // [127:112] unused
+    // attoio_wrap exposes only the 14 pads that actually reach pins;
+    // pad_dm carries the 3-bit drive-mode-per-pad slice that the
+    // chip-level gpio_top_dm consumes (the upper 5 bits of each AttoIO
+    // pad_ctl word stay inside the wrapper).
+    wire [13:0] attoio_pad_in;
+    wire [13:0] attoio_pad_out;
+    wire [13:0] attoio_pad_oe;
+    wire [41:0] attoio_pad_dm;
     wire        attoio_irq;
     wire        attoio_clk_iop;
 
@@ -248,12 +252,10 @@ module project_macro #(
     );
 
     // Thin project-side wrapper around attoio_macro that hides the unused
-    // hp0/hp1/hp2 host-peripheral bundles (144 unused ports collapsed).
-    // The hardened LEF/LIB target is `attoio_wrap`, which has a two-side
+    // hp0/hp1/hp2 host-peripheral bundles and the un-pinned pad logic.
+    // The hardened LEF/LIB target is `attoio_wrap` with a two-side
     // pin layout (pad_* north, APB+clk+rst+irq south).
-    attoio_wrap #(
-        .NGPIO(16)
-    ) u_attoio (
+    attoio_wrap u_attoio (
         .sysclk      (xclk),
         .clk_iop     (attoio_clk_iop),
         .rst_n       (rst_n),
@@ -269,7 +271,7 @@ module project_macro #(
         .pad_in      (attoio_pad_in),
         .pad_out     (attoio_pad_out),
         .pad_oe      (attoio_pad_oe),
-        .pad_ctl     (attoio_pad_ctl),
+        .pad_dm      (attoio_pad_dm),
         .irq_to_host (attoio_irq)
     );
 
@@ -527,18 +529,11 @@ module project_macro #(
     assign gpio_rt_dm[0*3 +: 3] = 3'b110;
     assign gpio_rt_dm[1*3 +: 3] = 3'b110;
 
-    // Only attoio_pad[13:0] reach the top-edge pad ring.
-    // attoio_pad[15:14] are tied off internally (no pad routing).
-    assign attoio_pad_in[13:0]  = gpio_top_in[13:0];
-    assign attoio_pad_in[15:14] = 2'b0;
-    assign gpio_top_out  = attoio_pad_out[13:0];
-    assign gpio_top_oeb  = ~attoio_pad_oe[13:0];
-
-    genvar i;
-    generate
-        for (i = 0; i < 14; i = i + 1) begin : gen_top_dm
-            assign gpio_top_dm[i*3 +: 3] = attoio_pad_ctl[i*8 +: 3];
-        end
-    endgenerate
+    // Top-edge pad ring -- attoio_wrap already exposes only the 14-pad
+    // slim interface, so the connection here is a straight wire-up.
+    assign attoio_pad_in = gpio_top_in[13:0];
+    assign gpio_top_out  = attoio_pad_out;
+    assign gpio_top_oeb  = ~attoio_pad_oe;
+    assign gpio_top_dm   = attoio_pad_dm;
 
 endmodule

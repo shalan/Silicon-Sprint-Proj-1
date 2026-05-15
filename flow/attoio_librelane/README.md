@@ -10,8 +10,12 @@ layout with nothing on E or W.
 
 ```
                 ┌──────────────────────────────┐
-   gpio_top ───►│  N (176 pins: pad_*)         │
-   pad ring     │                              │
+   gpio_top ───►│  N (84 pins:                 │
+   pad ring     │     pad_in[13:0],            │
+                │     pad_out[13:0],           │
+                │     pad_oe[13:0],            │
+                │     pad_dm[41:0])            │
+                │                              │
                 │       attoio_wrap            │
                 │  (wrapper -> attoio_macro,   │
                 │   RV32 + 1KB DFFRAM)         │
@@ -20,6 +24,10 @@ layout with nothing on E or W.
                 └──────────────────────────────┘
                        (E,W: empty)
 ```
+
+Each pad's signals are kept contiguous on the N face (`in`, `out`, `oe`,
+then its 3 `dm` bits) to mirror the per-pad bundle ordering used on
+project_macro's top edge -- abutment becomes one-to-one.
 
 This makes the integration step at project_macro level trivial: all
 GPIO routes go upward to the top pad ring, all APB routes go downward
