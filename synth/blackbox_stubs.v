@@ -41,20 +41,7 @@ module dll (resetb, enable, osc, clockp, div, dco, ext_trim);
     output [1:0] clockp;
 endmodule
 
-// DFFRAM — hand-laid-out single-port SRAM hard macro.
-// AttoIO instantiates 2x (256x32) for code/data and 1x (32x32) for the
-// register file. LibreLane brings in the real LEF/LIB at hardening.
-(* blackbox *) (* keep_hierarchy *)
-module DFFRAM #(
-    parameter WORDS = 256,
-    parameter WSIZE = 1
-) (
-    CLK, WE0, EN0, A0, Di0, Do0
-);
-    input                       CLK;
-    input  [WSIZE-1:0]          WE0;
-    input                       EN0;
-    input  [$clog2(WORDS)-1:0]  A0;
-    input  [(WSIZE*8-1):0]      Di0;
-    output [(WSIZE*8-1):0]      Do0;
-endmodule
+// DFFRAM is intentionally NOT black-boxed: the design synthesises the
+// behavioural RTL model (AttoIO/models/dffram_rtl.v) into standard-cell
+// flip-flops instead of using the hardened DFFRAM macro. Removes the
+// external DFFRAM-compiler dependency at the cost of area.
