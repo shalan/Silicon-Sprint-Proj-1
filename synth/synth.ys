@@ -30,8 +30,8 @@ read_verilog \
     usb_cdc/usb_cdc/phy_tx.v \
     usb_cdc/usb_cdc/sie.v
 
-read_verilog -sv fracn_dll/dll.v
-
+# dll (fracn_dll FLL) and DFFRAM are hard macros -- read only the
+# blackbox stubs here, never the behavioural RTL.
 read_verilog -sv synth/blackbox_stubs.v
 
 read_verilog \
@@ -53,14 +53,14 @@ read_verilog -sv \
     AttoIO/rtl/attoio_timer.v \
     AttoIO/rtl/attoio_wdt.v \
     AttoIO/rtl/attoio_ctrl.v \
-    AttoIO/models/dffram_rtl.v \
     frv32/rtl/attorv32.v
 
 verilog_defines -DNRV_SINGLE_PORT_REGF -DNRV_SHARED_ADDER -DNRV_SERIAL_SHIFT
 
 hierarchy -check -top project_macro
 
-setattr -mod -set keep_hierarchy 1 DFFRAM
+# keep_hierarchy is set via attributes in synth/blackbox_stubs.v for every
+# hard macro (rc_osc_16M, rc_osc_500k, por_macro, dll, DFFRAM).
 
 synth -top project_macro
 
