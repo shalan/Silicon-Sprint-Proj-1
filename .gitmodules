@@ -13,9 +13,3 @@
 [submodule "sky130_ef_ip__rc_osc_500k"]
 	path = sky130_ef_ip__rc_osc_500k
 	url = https://github.com/RTimothyEdwards/sky130_ef_ip__rc_osc_500k.git
-[submodule "AttoIO"]
-	path = AttoIO
-	url = https://github.com/shalan/AttoIO.git
-[submodule "frv32"]
-	path = frv32
-	url = https://github.com/shalan/attoRV32.git

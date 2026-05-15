@@ -41,7 +41,3 @@ module dll (resetb, enable, osc, clockp, div, dco, ext_trim);
     output [1:0] clockp;
 endmodule
 
-// DFFRAM is intentionally NOT black-boxed: the design synthesises the
-// behavioural RTL model (AttoIO/models/dffram_rtl.v) into standard-cell
-// flip-flops instead of using the hardened DFFRAM macro. Removes the
-// external DFFRAM-compiler dependency at the cost of area.

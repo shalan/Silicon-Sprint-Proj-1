@@ -26,27 +26,18 @@
         "dir::../../usb_cdc/usb_cdc/phy_rx.v",
         "dir::../../usb_cdc/usb_cdc/phy_tx.v",
         "dir::../../usb_cdc/usb_cdc/sie.v",
-        "dir::../../fracn_dll/dll.v",
-        "dir::../../fracn_dll/dll_controller.v",
-        "dir::../../fracn_dll/ring_osc2x13.v",
         "dir::../../synth/blackbox_stubs.v",
-        "dir::../../AttoIO/rtl/attoio_macro.v",
-        "dir::../../AttoIO/rtl/attoio_apb_if.v",
-        "dir::../../AttoIO/rtl/attoio_memmux.v",
-        "dir::../../AttoIO/rtl/attoio_gpio.v",
-        "dir::../../AttoIO/rtl/attoio_spi.v",
-        "dir::../../AttoIO/rtl/attoio_timer.v",
-        "dir::../../AttoIO/rtl/attoio_wdt.v",
-        "dir::../../AttoIO/rtl/attoio_ctrl.v",
-        "dir::../../AttoIO/models/dffram_rtl.v",
-        "dir::../../frv32/rtl/attorv32.v"
+        "dir::../../nc_sercom/rtl/nc_fifo.v",
+        "dir::../../nc_sercom/rtl/nc_sync.v",
+        "dir::../../nc_sercom/rtl/nc_ticker.v",
+        "dir::../../nc_sercom/rtl/nc_sercom_usart_tx.v",
+        "dir::../../nc_sercom/rtl/nc_sercom_usart_rx.v",
+        "dir::../../nc_sercom/rtl/nc_sercom_spi.v",
+        "dir::../../nc_sercom/rtl/nc_sercom_i2c.v",
+        "dir::../../nc_sercom/rtl/nc_sercom.v"
     ],
 
-    "VERILOG_DEFINES": [
-        "NRV_SINGLE_PORT_REGF",
-        "NRV_SHARED_ADDER",
-        "NRV_SERIAL_SHIFT"
-    ],
+    "//-blackbox": "dll, por_macro, and the two sky130 RC oscillators are pulled in via synth/blackbox_stubs.v above. AttoIO removed from this revision.",
 
     "CLOCK_PORT": "clk",
     "CLOCK_PERIOD": 50,

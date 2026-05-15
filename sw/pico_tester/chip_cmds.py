@@ -24,11 +24,11 @@ ADDR_REF_CNT       = 0x200C
 ADDR_IRQ_STATUS    = 0x2010   # chip-level IRQ aggregator (RO)
 
 ADDR_USB_FIFO      = 0x4000
-ADDR_ATTOIO        = 0x6000
 ADDR_SERCOM        = 0x8000
 
-# IRQ status register bits (at ADDR_IRQ_STATUS)
-IRQ_ATTOIO         = 1 << 0
+# IRQ status register bits (at ADDR_IRQ_STATUS).
+# Bit 0 was AttoIO irq_to_host (AttoIO removed; bit is now reserved
+# and always reads 0). Bit 1 is nc_sercom irq_o.
 IRQ_SERCOM         = 1 << 1
 
 MON_FLL    = 0
@@ -123,7 +123,6 @@ class ChipCtrl:
     def irq_pending(self):
         v = self.read_irq()
         return {
-            "attoio": bool(v & IRQ_ATTOIO),
             "sercom": bool(v & IRQ_SERCOM),
             "raw":    v,
         }

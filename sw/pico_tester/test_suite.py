@@ -84,19 +84,11 @@ def run_tests(apb, chip, reset, clk, fcnt, sercom=None):
     ctrl = chip.read_ctrl()
     check("Ext reset clears CTRL", ctrl == 0x00000100)
 
-    print("--- Test 10: AttoIO Register Access ---")
-    try:
-        ver = apb.read(0x670C)
-        print("    AttoIO VERSION = 0x%08X" % ver)
-        check("AttoIO accessible", True)
-    except Exception as e:
-        check("AttoIO: %s" % e, False)
-
     # ------------------------------------------------------------------
-    # New: IRQ status aggregator (0x2010). At rest, no peripheral should
-    # be asserting an IRQ, so the register reads 0.
+    # IRQ status aggregator (0x2010). At rest, no peripheral should be
+    # asserting an IRQ, so the register reads 0.
     # ------------------------------------------------------------------
-    print("--- Test 11: IRQ status idle ---")
+    print("--- Test 10: IRQ status idle ---")
     try:
         irq = chip.irq_pending()
         print("    IRQ status[0x2010] = 0x%08X" % irq["raw"])
@@ -108,7 +100,7 @@ def run_tests(apb, chip, reset, clk, fcnt, sercom=None):
     # New: nc_sercom reachability + internal USART loopback round-trip.
     # Uses the LOOPBACK bit in MODECFG so no external wiring is needed.
     # ------------------------------------------------------------------
-    print("--- Test 12: nc_sercom reachable + USART loopback ---")
+    print("--- Test 11: nc_sercom reachable + USART loopback ---")
     if sercom is None:
         check("sercom driver not wired in", False)
     else:

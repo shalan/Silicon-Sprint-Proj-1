@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-// project_macro — USB CDC + FLL + RC Oscillators + AttoIO test chip
+// project_macro — USB CDC + FLL + RC Oscillators + nc_sercom test chip
 //
 // GPIO Pin Map (bottom edge, 15 pins → Caravel right pads):
 //   [0]  : uart_rx      (input)
@@ -22,8 +22,8 @@
 //   [2-7] : sercom_pad[0:5]  (USART/SPI/I2C, runtime-configurable direction)
 //   [8]   : spare
 //
-// Top-edge (14 pins): AttoIO GPIO[13:0]  (AttoIO is single-side, NGPIO=14)
-//   [0-13]: attoio_gpio[13:0]
+// Top-edge (14 pins): all spare (AttoIO removed)
+//   [0-13]: spare
 //
 // Clock architecture:
 //   xclk (12 MHz GPIO) -> fracn_dll -> 96 MHz -> /2 -> 48 MHz USB clock (clk_i)
@@ -31,13 +31,12 @@
 //   FLL bypass mode: xclk directly to USB clk_i (for debug)
 //   RC OSC 16 MHz: monitor output + optional FLL reference
 //   RC OSC 500 kHz: low-frequency monitor output
-//   AttoIO: sysclk = xclk, clk_iop = xclk / 2
 //
 // APB address map (via UART APB master, 8 KB slots):
 //   0x0000: Clock control (FLL, RC OSC enables, dividers, muxes, USB pad)
 //   0x2000: Status registers (freq counters, sync'd status, IRQ status @ 0x2010)
 //   0x4000: USB CDC FIFO (read/write bytes)
-//   0x6000: AttoIO I/O processor (11-bit internal address space)
+//   0x6000: unused (was AttoIO; tied off with PSLVERR=0, PREADY=1)
 //   0x8000: nc_sercom (USART/SPI/I2C, 12-bit internal address space)
 
 `timescale 1ns / 1ps
@@ -223,57 +222,14 @@ module project_macro #(
     wire        S0_PSLVERR, S1_PSLVERR, S2_PSLVERR, S3_PSLVERR;
     wire        S4_PSLVERR, S5_PSLVERR, S6_PSLVERR, S7_PSLVERR;
 
-    // Slot 4 (0x8000) is driven by nc_sercom; tie off the remaining slots.
-    assign S5_PRDATA = 32'd0;  assign S6_PRDATA = 32'd0;
-    assign S7_PRDATA = 32'd0;
-    assign S5_PREADY = 1'b1;   assign S6_PREADY = 1'b1;
-    assign S7_PREADY = 1'b1;
-    assign S5_PSLVERR = 1'b0;  assign S6_PSLVERR = 1'b0;
-    assign S7_PSLVERR = 1'b0;
-
-    // AttoIO is parameterised to NGPIO=16 (enforced; 14 is not legal),
-    // but we deliberately route only 14 of the GPIOs out to top-edge pads
-    // so the macro stays on a single side of the pad ring.
-    // attoio_pad[15:14] are tied off internally and never reach a pin.
-    // attoio_wrap exposes only the 14 pads that actually reach pins;
-    // pad_dm carries the 3-bit drive-mode-per-pad slice that the
-    // chip-level gpio_top_dm consumes (the upper 5 bits of each AttoIO
-    // pad_ctl word stay inside the wrapper).
-    wire [13:0] attoio_pad_in;
-    wire [13:0] attoio_pad_out;
-    wire [13:0] attoio_pad_oe;
-    wire [41:0] attoio_pad_dm;
-    wire        attoio_irq;
-    wire        attoio_clk_iop;
-
-    clk_div #(.WIDTH(16)) u_attoio_clk_div (
-        .clk_in(xclk), .rst_n(rst_n),
-        .en(1'b1), .div_ratio(16'd0), .clk_out(attoio_clk_iop)
-    );
-
-    // Thin project-side wrapper around attoio_macro that hides the unused
-    // hp0/hp1/hp2 host-peripheral bundles and the un-pinned pad logic.
-    // The hardened LEF/LIB target is `attoio_wrap` with a two-side
-    // pin layout (pad_* north, APB+clk+rst+irq south).
-    attoio_wrap u_attoio (
-        .sysclk      (xclk),
-        .clk_iop     (attoio_clk_iop),
-        .rst_n       (rst_n),
-        .PADDR       (S3_PADDR[10:0]),
-        .PSEL        (S3_PSEL),
-        .PENABLE     (S3_PENABLE),
-        .PWRITE      (S3_PWRITE),
-        .PWDATA      (S3_PWDATA),
-        .PSTRB       (S3_PWRITE ? 4'b1111 : 4'b0000),
-        .PRDATA      (S3_PRDATA),
-        .PREADY      (S3_PREADY),
-        .PSLVERR     (S3_PSLVERR),
-        .pad_in      (attoio_pad_in),
-        .pad_out     (attoio_pad_out),
-        .pad_oe      (attoio_pad_oe),
-        .pad_dm      (attoio_pad_dm),
-        .irq_to_host (attoio_irq)
-    );
+    // Slot 4 (0x8000) is driven by nc_sercom; tie off the remaining
+    // slots. Slot 3 (0x6000) was AttoIO and is now reserved.
+    assign S3_PRDATA = 32'd0;  assign S5_PRDATA = 32'd0;
+    assign S6_PRDATA = 32'd0;  assign S7_PRDATA = 32'd0;
+    assign S3_PREADY = 1'b1;   assign S5_PREADY = 1'b1;
+    assign S6_PREADY = 1'b1;   assign S7_PREADY = 1'b1;
+    assign S3_PSLVERR = 1'b0;  assign S5_PSLVERR = 1'b0;
+    assign S6_PSLVERR = 1'b0;  assign S7_PSLVERR = 1'b0;
 
     uart_apb_sys #(
         .DEFAULT_DIVISOR (BAUD_DIV),
@@ -365,7 +321,7 @@ module project_macro #(
         .rc500k_en_sts (rc500k_en),
         .sel_mon_sts   (sel_mon),
         .fll_bypass_sts(fll_bypass),
-        .irq_attoio_in (attoio_irq),
+        .irq_attoio_in (1'b0),     // AttoIO removed from this revision
         .irq_sercom_in (sercom_irq)
     );
 
@@ -529,11 +485,15 @@ module project_macro #(
     assign gpio_rt_dm[0*3 +: 3] = 3'b110;
     assign gpio_rt_dm[1*3 +: 3] = 3'b110;
 
-    // Top-edge pad ring -- attoio_wrap already exposes only the 14-pad
-    // slim interface, so the connection here is a straight wire-up.
-    assign attoio_pad_in = gpio_top_in[13:0];
-    assign gpio_top_out  = attoio_pad_out;
-    assign gpio_top_oeb  = ~attoio_pad_oe;
-    assign gpio_top_dm   = attoio_pad_dm;
+    // Top-edge pads are all spare (AttoIO removed). Tie outputs low,
+    // oeb high (tri-state input), drive-mode neutral 3'b110.
+    assign gpio_top_out = 14'b0;
+    assign gpio_top_oeb = {14{1'b1}};
+    genvar i;
+    generate
+        for (i = 0; i < 14; i = i + 1) begin : gen_top_dm
+            assign gpio_top_dm[i*3 +: 3] = 3'b110;
+        end
+    endgenerate
 
 endmodule

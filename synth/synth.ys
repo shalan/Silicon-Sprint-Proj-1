@@ -2,7 +2,6 @@ read_liberty -lib -ignore_miss_func /Users/mshalan/work/pdks/volare/sky130/versi
 
 read_verilog \
     rtl/project_macro.v \
-    rtl/attoio_wrap.v \
     rtl/fll_top.v \
     rtl/apb_clk_ctrl.v \
     rtl/apb_status.v \
@@ -33,8 +32,6 @@ read_verilog \
 
 # dll (fracn_dll FLL) is the only hard digital macro we black-box; the
 # RC oscillators and por_macro are also blackboxed (LEF/LIB drop-ins).
-# DFFRAM is synthesised from its behavioural RTL model -- no compiler
-# dependency, traded for area.
 read_verilog -sv synth/blackbox_stubs.v
 
 read_verilog \
@@ -47,24 +44,10 @@ read_verilog \
     nc_sercom/rtl/nc_sercom_i2c.v \
     nc_sercom/rtl/nc_sercom.v
 
-read_verilog -sv \
-    AttoIO/rtl/attoio_macro.v \
-    AttoIO/rtl/attoio_apb_if.v \
-    AttoIO/rtl/attoio_memmux.v \
-    AttoIO/rtl/attoio_gpio.v \
-    AttoIO/rtl/attoio_spi.v \
-    AttoIO/rtl/attoio_timer.v \
-    AttoIO/rtl/attoio_wdt.v \
-    AttoIO/rtl/attoio_ctrl.v \
-    AttoIO/models/dffram_rtl.v \
-    frv32/rtl/attorv32.v
-
-verilog_defines -DNRV_SINGLE_PORT_REGF -DNRV_SHARED_ADDER -DNRV_SERIAL_SHIFT
-
 hierarchy -check -top project_macro
 
 # keep_hierarchy is set via attributes in synth/blackbox_stubs.v for every
-# hard macro (rc_osc_16M, rc_osc_500k, por_macro, dll, DFFRAM).
+# hard macro (rc_osc_16M, rc_osc_500k, por_macro, dll).
 
 synth -top project_macro
 

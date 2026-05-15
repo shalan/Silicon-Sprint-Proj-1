@@ -131,7 +131,7 @@ the on-chip peripheral through the package pins.
 |-----------------|--------------|-------|
 | `gpio_bot[12]`  | `adpor_mon`  | All-digital PoR pulse (~20.5 µs at TT). Pure monitor output; wire to a free GPIO + scope channel to watch the pulse on every power cycle. |
 | `gpio_rt[2..7]` | `sercom_pad[0..5]` | nc_sercom USART/SPI/I2C pads. Wire up to drive a real serial device, **or** use the internal-loopback self-test (`sercom loopback`) which needs no external pins. |
-| `gpio_top[0..13]` | `attoio_gpio[13:0]` | AttoIO GPIOs (driven by the on-chip RV32EC firmware). Not used by the Pico tester. |
+| `gpio_top[0..13]` | spare | All 14 top-edge pads are unused in this revision (was AttoIO). |
 | `gpio_bot[13..14]`, `gpio_rt[0,1,8]` | spare | Unused. |
 
 **Important:**
@@ -206,7 +206,7 @@ Ready. Type 'help' for commands.
 ```
 > read 0x0000                  # Read CTRL register
 > write 0x0000 0x00000101      # Write CTRL register
-> dump 0x6000 4                # Read 4 words starting at 0x6000
+> dump 0x8000 4                # Read 4 sercom registers (CR, SR, DR, ...)
 ```
 
 ### Clock Control
@@ -298,11 +298,11 @@ the frequency below the PIO counter's maximum rate (~5 MHz).
 
 ```
 > irq                          # Read 0x2010
-                               # -> "IRQ status[0x2010] = 0x00000000 attoio=False sercom=False"
+                               # -> "IRQ status[0x2010] = 0x00000000 sercom=False"
 ```
 
-Bit 0 = AttoIO `irq_to_host`, bit 1 = nc_sercom `irq_o`. Poll-only; bits
-clear when the source peripheral deasserts.
+Bit 0 is reserved (was AttoIO; always reads 0). Bit 1 = nc_sercom
+`irq_o`. Poll-only; bits clear when the source peripheral deasserts.
 
 ### nc_sercom (USART / SPI / I2C, APB slot 4 at 0x8000)
 
@@ -322,7 +322,7 @@ back through the same DR.
 ### Automated Testing
 
 ```
-> test                         # Run 12-test bring-up suite
+> test                         # Run 11-test bring-up suite
 ```
 
 This will:
@@ -335,9 +335,8 @@ This will:
 7. Test FLL bypass
 8. Test USB FIFO
 9. Test external reset
-10. Verify AttoIO register access
-11. Read IRQ status (expect 0 at idle)
-12. nc_sercom reachability + USART loopback round-trip
+10. Read IRQ status (expect 0 at idle)
+11. nc_sercom reachability + USART loopback round-trip
 
 ## 7. Typical Bring-Up Sequence
 
@@ -354,8 +353,8 @@ This will:
 > freq all                     # Measure all frequencies
 > counters                     # Check internal counters
 > usb status                   # Check USB configured
-> read 0x670C                  # Read AttoIO version
-> dump 0x6000 16               # Dump AttoIO registers
+> irq                          # Read chip-level IRQ status
+> sercom loopback              # Internal USART loopback self-test
 > test                         # Run full test suite
 ```
 

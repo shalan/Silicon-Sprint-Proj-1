@@ -242,8 +242,8 @@ def cmd_test(args):
 
 def cmd_irq(args):
     irq = chip.irq_pending()
-    print("IRQ status[0x2010] = 0x%08X  attoio=%s sercom=%s" %
-          (irq["raw"], irq["attoio"], irq["sercom"]))
+    print("IRQ status[0x2010] = 0x%08X  sercom=%s" %
+          (irq["raw"], irq["sercom"]))
 
 def cmd_sercom(args):
     if not args:

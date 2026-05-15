@@ -1,10 +1,9 @@
-# Silicon Sprint test chip — USB CDC, FLL, RC OSCs, AttoIO, nc_sercom, ADPoR
+# Silicon Sprint test chip — USB CDC, FLL, RC OSCs, nc_sercom, ADPoR
 
 A Sky130 HD test-chip RTL integrating:
 
 - USB CDC over a 48 MHz fractional-N PLL
 - Two on-chip RC oscillators (16 MHz, 500 kHz)
-- An AttoIO I/O processor (RV32EC + 1 KB DFFRAM + GPIO/SPI/timer/WDT)
 - An nc_sercom multi-protocol serial peripheral (USART / SPI / I2C)
 - An all-digital power-on-reset macro (ring osc + ADPOR), monitor-only
 - UART-to-APB debug bridge
@@ -22,10 +21,9 @@ Targets the [Caravel](https://github.com/efabless/caravel) user-project harness.
   uart_rx ----->|  | APB     |     S0 0x0000  clk_ctrl                       |
   uart_tx <-----|  | bridge  |     S1 0x2000  status (incl. IRQ @ 0x10)      |
                 |  +---------+     S2 0x4000  usb_fifo                       |
-                |                  S3 0x6000  AttoIO                         |
+                |                  S3 0x6000  unused (reserved)              |
                 |                  S4 0x8000  nc_sercom                      |
                 |                                                            |
-                |  AttoIO       : RV32EC + 1 KB DFFRAM, 14 GPIOs (top edge)  |
                 |  nc_sercom    : USART/SPI/I2C, 6 pads (right edge)         |
                 |  por_macro    : self-clocked ADPoR, monitor on bot[12]     |
                 |  RC OSC 16M   : monitor output                             |
@@ -39,8 +37,6 @@ Targets the [Caravel](https://github.com/efabless/caravel) user-project harness.
 |---|---|---|---|---|
 | **APB / system** | `xclk` | 12 MHz | uart_apb_sys, apb_clk_ctrl, apb_status, apb_usb_fifo, nc_sercom (PCLK) | — |
 | **USB** | `usb_clk` | 48 MHz | usb_cdc (clk_i) | IP-internal 2-stage sync; app_clk_i = xclk |
-| **AttoIO macro** | `sysclk` | 12 MHz (=xclk) | attoio_macro | — |
-| **AttoIO core** | `clk_iop` | 6 MHz (xclk/2) | AttoRV32, attoio_spi, attoio_timer, attoio_wdt | Known phase (2:1 from xclk) |
 | **FLL** | `fll_clk_96m` | 96 MHz | dll (hard macro) | Internal; output sampled via /2 + dividers |
 | **RC 16M** | `rc16m_clk` | ~16 MHz | sky130_ef_ip__rc_osc_16M | 2-stage sync to xclk |
 | **RC 500k** | `rc500k_clk` | ~500 kHz | sky130_ef_ip__rc_osc_500k | 2-stage sync to xclk |
@@ -50,7 +46,7 @@ Targets the [Caravel](https://github.com/efabless/caravel) user-project harness.
 
 ### GPIO pin map (38 pads)
 
-Every macro lives on a single edge of the pad ring (post-cleanup).
+Every macro lives on a single edge of the pad ring.
 
 #### Bottom edge — `gpio_bot[14:0]` (15 pins)
 
@@ -76,16 +72,15 @@ Every macro lives on a single edge of the pad ring (post-cleanup).
 
 | Pin | Dir | Signal | Source / sink |
 |-----|-----|--------|---------------|
-| 0 | — | spare | — |
-| 1 | — | spare | — |
+| 0..1 | — | spare | — |
 | 2..7 | inout | `sercom_pad[0:5]` | nc_sercom (USART / SPI / I2C per mode) |
 | 8 | — | spare | — |
 
 #### Top edge — `gpio_top[13:0]` (14 pins)
 
-| Pin | Dir | Signal | Source / sink |
-|-----|-----|--------|---------------|
-| 0..13 | inout | `attoio_gpio[13:0]` | attoio_macro (NGPIO=16 internally; [15:14] tied off, not pinned) |
+All 14 pins are **spare** (AttoIO removed from this revision). Drive
+mode set to `3'b110` (push-pull), outputs tied low, `oeb` held high
+(tri-state input).
 
 ### APB address map (UART bridge, 8 KB slots)
 
@@ -94,14 +89,14 @@ Every macro lives on a single edge of the pad ring (post-cleanup).
 | `0x0000` | clk_ctrl | FLL/RC enables, dividers, monitor muxes, USB pad drive modes |
 | `0x2000` | status   | Frequency counters, sync'd activity bits, **IRQ status @ 0x2010** |
 | `0x4000` | usb_fifo | USB CDC FIFO byte read/write |
-| `0x6000` | AttoIO   | RV32EC I/O processor (12-bit internal address space) |
+| `0x6000` | — | unused (reserved); PSEL accepted but PSLVERR=0, PREADY=1, PRDATA=0 |
 | `0x8000` | nc_sercom | USART/SPI/I2C (12-bit internal address space) |
 
 ### IRQ status register (0x2010, read-only, sync'd to xclk)
 
 | Bit | Source |
 |---|---|
-| 0 | `irq_attoio` — AttoIO `irq_to_host` |
+| 0 | reserved (was `irq_attoio`; always reads 0) |
 | 1 | `irq_sercom` — nc_sercom `irq_o` |
 | [31:2] | reserved (room for future peripherals) |
 
@@ -116,8 +111,6 @@ Poll-only. Bits self-clear when the source peripheral deasserts.
 | `sky130_ef_ip__rc_osc_500k` | RTimothyEdwards | analog GDS drop-in |
 | `por_macro` | local ([por_macro/](por_macro/)) | own LibreLane flow |
 
-DFFRAM is **not** black-boxed — the behavioural RTL model is synthesised into standard-cell flops to remove the DFFRAM-compiler dependency (trade-off: +~16k cells).
-
 ## Simulation
 
 Requires [Icarus Verilog](http://iverilog.icarus.com).
@@ -128,8 +121,6 @@ make sim            # builds + runs tb/tb_apb_regs.v; expect 25/0 pass
 make sim DUMP=1     # also dumps build/wave.vcd
 make lint           # iverilog null-target compile check
 ```
-
-The harness is split between `tb/include/tb_harness.vh` (DUT instance, clocks, reset, UART-APB driver, `check`, pass/fail counters with `$fatal` on failure) and per-test files `tb/tb_<name>.v`. `make sim TEST=<name>` selects the testbench module `tb_<name>` from `tb/tb_<name>.v`.
 
 GitHub Actions runs lint + sim on every push (`.github/workflows/sim.yml`).
 
@@ -151,20 +142,16 @@ export PDK_ROOT=/path/to/sky130A
 make synth
 ```
 
-### Latest result — **32 192 cells**
+### Latest result — **10 316 cells**
 
 | Block | Cells | % |
 |---|---|---|
-| AttoIO subsystem (RV32 + 2× DFFRAM + peripherals) | 22 673 | 70.4 % |
-| └─ DFFRAM ×2 (synthesised as FFs) | 15 719 | 48.8 % |
-| └─ AttoRV32 CPU | 2 683 | 8.3 % |
-| └─ attoio_gpio/spi/timer/wdt/ctrl/memmux | 2 732 | 8.5 % |
-| USB CDC (sie + endpoints + FIFOs + phy) | 2 945 | 9.1 % |
-| nc_sercom (USART + SPI + I2C + FIFOs) | 1 504 | 4.7 % |
-| apb_status | 929 | 2.9 % |
-| apb_clk_ctrl | 347 | 1.1 % |
-| UART-APB bridge | 243 | 0.8 % |
-| Other glue (apb_usb_fifo, clk_div ×4, fll_top, etc.) | ~3 500 | 11.0 % |
+| USB CDC (sie + endpoints + FIFOs + phy) | ~2 945 | 28.5 % |
+| nc_sercom (USART + SPI + I2C + FIFOs) | ~1 504 | 14.6 % |
+| apb_status | ~929 | 9.0 % |
+| apb_clk_ctrl | ~347 | 3.4 % |
+| UART-APB bridge | ~243 | 2.4 % |
+| Other glue (apb_usb_fifo, clk_div ×4, fll_top, etc.) | ~3 500 | 33.9 % |
 
 Hard-macro instances preserved as opaque cells: 1× `dll`, 1× `por_macro`, 1× `sky130_ef_ip__rc_osc_16M`, 1× `sky130_ef_ip__rc_osc_500k`.
 
@@ -210,8 +197,6 @@ nc_sercom/            # Vendored from github.com/nativechips/nc_lib (Apache-2.0)
   sim.yml             # lint + sim on every push
 
 # Submodules
-AttoIO/                 # github.com/shalan/AttoIO
-frv32/                  # github.com/shalan/attoRV32
 usb_cdc/                # github.com/ulixxe/usb_cdc
 uart_apb_master/        # github.com/shalan/uart_apb_master
 fracn_dll/              # github.com/RTimothyEdwards/fracn_dll
