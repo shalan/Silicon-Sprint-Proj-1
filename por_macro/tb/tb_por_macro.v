@@ -20,17 +20,18 @@ module tb_por_macro;
     wire por_n_out;
 
     por_macro #(
-        .ADPOR_LENGTH      (24),
+        .ADPOR_LENGTH      (20),
         .DIV_BITS          (6),
         .RO_HALF_PERIOD_NS (8)
     ) dut (
         .por_n_out (por_n_out)
     );
 
-    // Expected pulse window:  ~12 us (FF) .. ~51 us (SS), ~25 us (TT).
-    // Sim model uses nominal RO_HALF_PERIOD_NS=8 -> expect ~25 us.
-    localparam integer EXPECT_MIN_NS = 20_000;
-    localparam integer EXPECT_MAX_NS = 35_000;
+    // Expected pulse window: ~10 us (FF) .. ~42 us (SS), ~20.5 us (TT)
+    // for LENGTH=20. Sim model uses nominal RO_HALF_PERIOD_NS=8 so the
+    // measured pulse should land on the TT estimate.
+    localparam integer EXPECT_MIN_NS = 16_000;
+    localparam integer EXPECT_MAX_NS = 28_000;
 
     integer pass_count;
     integer fail_count;

@@ -2,7 +2,7 @@
 //
 // por_macro — All-digital power-on-reset macro for characterization.
 //
-//   ring_osc (~62 MHz nom)       /64 divider         adpor (LENGTH=24)
+//   ring_osc (~62 MHz nom)       /64 divider         adpor (LENGTH=20)
 //   +-------+   ro_clk   +------------+   por_clk   +--------+
 //   |       |----------->|            |------------>|        |
 //   |       |            |  div_cnt   |             | shift  |---> por_n_out
@@ -14,8 +14,8 @@
 //       +------------------------------------------------+
 //
 // Pulse width (typical, post-layout, TT 1.8 V 25 C):
-//   LENGTH * (T_ro * 64) = 24 * (16 ns * 64) ~= 25 us
-//   PVT range (FF..SS):                       ~12 us .. ~51 us
+//   LENGTH * (T_ro * 64) = 20 * (16 ns * 64) ~= 20.5 us
+//   PVT range (FF..SS):                       ~10 us .. ~42 us
 //
 // After the PoR pulse deasserts:
 //   - `por_n_out` stays HIGH (shift registers hold their settled state)
@@ -31,7 +31,7 @@
 `timescale 1ns / 1ps
 
 module por_macro #(
-    parameter integer ADPOR_LENGTH       = 24,
+    parameter integer ADPOR_LENGTH       = 20,
     parameter integer DIV_BITS           = 6,    // /64
     parameter integer RO_HALF_PERIOD_NS  = 8     // ~62.5 MHz nominal
 ) (
