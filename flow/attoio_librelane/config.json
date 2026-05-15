@@ -35,10 +35,10 @@
     "PNR_SDC_FILE":     "dir::attoio_pnr.sdc",
     "SIGNOFF_SDC_FILE": "dir::attoio_signoff.sdc",
 
-    "//-floorplan": "N and S now carry ~84/88 pins respectively (slim wrapper). A near-square aspect keeps both pin faces roomy without wasting silicon.",
+    "//-floorplan": "N and S each carry ~84/88 pins (slim wrapper). Aspect 1.4 widens N face headroom while keeping the macro comfortably narrower than project_macro (~485 um vs 880 um).",
     "FP_SIZING":       "relative",
     "FP_CORE_UTIL":    70,
-    "FP_ASPECT_RATIO": 1.2,
+    "FP_ASPECT_RATIO": 1.4,
     "FP_CORE_MARGIN":  5,
 
     "FP_PIN_ORDER_CFG": "dir::pin_order.cfg",
