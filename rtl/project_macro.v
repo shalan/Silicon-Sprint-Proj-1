@@ -17,12 +17,12 @@
 //   [12] : adpor_mon    (output, all-digital PoR pulse — monitoring only)
 //   [13-14]: spare
 //
-// Right-edge (9 pins): AttoIO GPIO[15:14] + nc_sercom pads + spare
-//   [0-1] : attoio_gpio[15:14]
+// Right-edge (9 pins): nc_sercom pads + spares
+//   [0-1] : spare
 //   [2-7] : sercom_pad[0:5]  (USART/SPI/I2C, runtime-configurable direction)
 //   [8]   : spare
 //
-// Top-edge (14 pins): AttoIO GPIO[13:0]
+// Top-edge (14 pins): AttoIO GPIO[13:0]  (AttoIO is single-side, NGPIO=14)
 //   [0-13]: attoio_gpio[13:0]
 //
 // Clock architecture:
@@ -231,10 +231,14 @@ module project_macro #(
     assign S5_PSLVERR = 1'b0;  assign S6_PSLVERR = 1'b0;
     assign S7_PSLVERR = 1'b0;
 
+    // AttoIO is parameterised to NGPIO=16 (enforced; 14 is not legal),
+    // but we deliberately route only 14 of the GPIOs out to top-edge pads
+    // so the macro stays on a single side of the pad ring.
+    // attoio_pad[15:14] are tied off internally and never reach a pin.
     wire [15:0] attoio_pad_in;
-    wire [15:0] attoio_pad_out;
-    wire [15:0] attoio_pad_oe;
-    wire [127:0] attoio_pad_ctl;
+    wire [15:0] attoio_pad_out;        // [15:14] left unconnected
+    wire [15:0] attoio_pad_oe;         // [15:14] left unconnected
+    wire [127:0] attoio_pad_ctl;       // [127:112] unused
     wire        attoio_irq;
     wire        attoio_clk_iop;
 
@@ -522,15 +526,18 @@ module project_macro #(
     assign gpio_rt_dm[7*3 +: 3] = 3'b110;
     assign gpio_rt_dm[8*3 +: 3] = 3'b110;
 
-    assign attoio_pad_in[15:14] = gpio_rt_in[1:0];
-    assign gpio_rt_out[1:0]     = attoio_pad_out[15:14];
-    assign gpio_rt_oeb[1:0]     = ~attoio_pad_oe[15:14];
-    assign gpio_rt_dm[0*3 +: 3] = attoio_pad_ctl[15*8 +: 3];
-    assign gpio_rt_dm[1*3 +: 3] = attoio_pad_ctl[14*8 +: 3];
+    // gpio_rt[1:0] are now spare (AttoIO reduced to single-side, 14 GPIO on top).
+    assign gpio_rt_out[1:0]     = 2'b0;
+    assign gpio_rt_oeb[1:0]     = 2'b11;     // tri-state (input)
+    assign gpio_rt_dm[0*3 +: 3] = 3'b110;
+    assign gpio_rt_dm[1*3 +: 3] = 3'b110;
 
-    assign attoio_pad_in[13:0] = gpio_top_in[13:0];
-    assign gpio_top_out        = attoio_pad_out[13:0];
-    assign gpio_top_oeb        = ~attoio_pad_oe[13:0];
+    // Only attoio_pad[13:0] reach the top-edge pad ring.
+    // attoio_pad[15:14] are tied off internally (no pad routing).
+    assign attoio_pad_in[13:0]  = gpio_top_in[13:0];
+    assign attoio_pad_in[15:14] = 2'b0;
+    assign gpio_top_out  = attoio_pad_out[13:0];
+    assign gpio_top_oeb  = ~attoio_pad_oe[13:0];
 
     genvar i;
     generate
