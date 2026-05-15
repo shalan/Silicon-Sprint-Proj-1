@@ -51,19 +51,29 @@ foreach p $host_outputs {
     set_output_delay -clock sysclk -min 2.0 [get_ports $p]
 }
 
+# pad_in is captured by BOTH sysclk (attoio_gpio sync chain) and
+# clk_iop (pad_in_iop_sync chain in attoio_macro). Constrain against
+# the faster sysclk so STA exercises the tighter setup; the async
+# clock-group declaration above keeps the two domains independent.
 set pad_inputs  [list pad_in]
-set pad_outputs [list pad_out pad_oe pad_ctl]
+set pad_outputs [list pad_out pad_oe pad_dm]
 
 foreach p $pad_inputs {
-    set_input_delay  -clock clk_iop -max 9.0 [get_ports $p]
-    set_input_delay  -clock clk_iop -min 2.0 [get_ports $p]
+    set_input_delay  -clock sysclk -max 4.5 [get_ports $p]
+    set_input_delay  -clock sysclk -min 2.0 [get_ports $p]
 }
 
 foreach p $pad_outputs {
-    set_output_delay -clock clk_iop -max 9.0 [get_ports $p]
-    set_output_delay -clock clk_iop -min 2.0 [get_ports $p]
+    # pad_* outputs (incl. pad_dm = lower-3-of-pad_ctl) are driven by
+    # sysclk-domain logic in attoio_gpio / attoio_ctrl.
+    set_output_delay -clock sysclk -max 4.5 [get_ports $p]
+    set_output_delay -clock sysclk -min 2.0 [get_ports $p]
 }
 
 # ----------------------------------------------------- drives and loads -----
 set_driving_cell -lib_cell sky130_fd_sc_hd__inv_2 -pin Y [all_inputs]
 set_load 0.0175 [all_outputs]
+
+# ---------------------------------------------------- design rule limits ----
+set_max_transition 1.5 [current_design]
+set_max_fanout     10  [current_design]

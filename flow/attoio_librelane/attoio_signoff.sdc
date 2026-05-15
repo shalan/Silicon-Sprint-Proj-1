@@ -48,19 +48,27 @@ foreach p $host_outputs {
     set_output_delay -clock sysclk -min 2.0 [get_ports $p]
 }
 
+# pad_in is captured by sysclk (attoio_gpio sync) and clk_iop
+# (pad_in_iop_sync). Same rationale as the PnR SDC -- constrain
+# against the faster sysclk; the async clock-group declaration
+# upstream keeps the two domains independent.
 set pad_inputs  [list pad_in]
-set pad_outputs [list pad_out pad_oe pad_ctl]
+set pad_outputs [list pad_out pad_oe pad_dm]
 
 foreach p $pad_inputs {
-    set_input_delay  -clock clk_iop -max 10.0 [get_ports $p]
-    set_input_delay  -clock clk_iop -min 2.0  [get_ports $p]
+    set_input_delay  -clock sysclk -max 5.0 [get_ports $p]
+    set_input_delay  -clock sysclk -min 2.0 [get_ports $p]
 }
 
 foreach p $pad_outputs {
-    set_output_delay -clock clk_iop -max 10.0 [get_ports $p]
-    set_output_delay -clock clk_iop -min 2.0  [get_ports $p]
+    set_output_delay -clock sysclk -max 5.0 [get_ports $p]
+    set_output_delay -clock sysclk -min 2.0 [get_ports $p]
 }
 
 # ----------------------------------------------------- drives and loads -----
 set_driving_cell -lib_cell sky130_fd_sc_hd__inv_2 -pin Y [all_inputs]
 set_load 0.0175 [all_outputs]
+
+# ---------------------------------------------------- design rule limits ----
+set_max_transition 1.5 [current_design]
+set_max_fanout     10  [current_design]
