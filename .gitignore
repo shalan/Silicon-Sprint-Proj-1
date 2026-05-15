@@ -24,3 +24,7 @@ synth/*.check
 simx.*
 tb_*.vcd
 tb_*.vvp
+
+# Hardening run outputs (large, regenerable)
+flow/*_librelane/runs/
+por_macro/flow/librelane/runs/
